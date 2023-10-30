@@ -23,7 +23,14 @@ def db_seed():
         
         print("Database seeded!")
     
-
+@app.cli.command('db_reseed')
+def db_reseed():
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        load_guild()
+        print("Database reseeded!")
+        
 if __name__ == '__main__':
     app.run(debug=True)
     # with app.app_context():
