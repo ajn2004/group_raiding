@@ -1,0 +1,76 @@
+<!-- templates/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-3">
+        <h1>Game Dashboard</h1>
+
+        <!-- Add Player Form -->
+        <h2>Add Player</h2>
+        <form action="/player" method="post">
+            <div class="form-group">
+                <label for="playerName">Player Name:</label>
+                <input type="text" class="form-control" id="playerName" name="name" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Player</button>
+        </form>
+
+        <!-- Add Schedule Form -->
+        <h2>Add Schedule</h2>
+        <form action="/schedule" method="post">
+            <!-- ... form fields for adding schedule ... -->
+            <button type="submit" class="btn btn-primary">Add Schedule</button>
+        </form>
+
+        <!-- Players List -->
+        <h2>Players</h2>
+        <ul class="list-group" id="players-list">
+            <!-- Player items will be inserted here -->
+        </ul>
+
+        <!-- Schedules List -->
+        <h2>Schedules</h2>
+        <ul class="list-group" id="schedules-list">
+            <!-- Schedule items will be inserted here -->
+        </ul>
+
+        <!-- Characters List -->
+        <h2>Characters</h2>
+        <ul class="list-group" id="characters-list">
+            <!-- Character items will be inserted here -->
+        </ul>
+
+        <!-- Add Character Form -->
+        <h2>Add Character</h2>
+        <form action="/character" method="post">
+            <!-- ... form fields for adding character ... -->
+            <button type="submit" class="btn btn-primary">Add Character</button>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script>
+        // JavaScript to dynamically load and display players, schedules, and characters
+        // For example, using fetch API to get players and then displaying them:
+        // fetch('/players')
+        //   .then(response => response.json())
+        //   .then(data => {
+        //     const playersList = document.getElementById('players-list');
+        //     data.forEach(player => {
+        //       const li = document.createElement('li');
+        //       li.className = 'list-group-item';
+        //       li.textContent = player.name;
+        //       playersList.appendChild(li);
+        //     });
+        //   });
+    </script>
+</body>
+</html>

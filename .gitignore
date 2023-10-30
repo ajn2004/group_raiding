@@ -1,0 +1,5 @@
+/.env
+/__pycache__/
+/.main.py.~undo-tree~
+/.app.py.~undo-tree~
+/..env.~undo-tree~
