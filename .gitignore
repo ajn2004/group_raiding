@@ -4,4 +4,4 @@
 /.app.py.~undo-tree~
 /..env.~undo-tree~
 /*~undo-tree~
-app/*~undo-tree~
+app/.*.~undo-tree~	

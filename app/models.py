@@ -1,3 +1,4 @@
+from enum import unique
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref
 
@@ -7,10 +8,11 @@ class Player(db.Model):
     __tablename__ = 'players'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
+    name = db.Column(db.String(80), unique = True, nullable=False)
     characters = db.relationship('Character', backref='player', lazy=True)
 
     def __init__(self, name):
+        name.lower()
         self.name = name
         
     def __repr__(self):
@@ -76,7 +78,9 @@ class Character(db.Model):
     specializations = db.relationship('Specialization', backref='character', lazy=True)
 
     def __init__(self, name, class_name, player_id):
+        name.lower()
         self.name = name
+        class_name.lower()
         self.class_name = class_name
         self.player_id = player_id
     
@@ -94,6 +98,7 @@ class Specialization(db.Model):
     buffs = db.relationship('Buff', backref='specialization', lazy='dynamic')
 
     def __init__(self, name, role_id, gearscore, character_id):
+        name.lower()
         self.name = name
         self.role_id = role_id
         self.gearscore = gearscore
@@ -110,6 +115,7 @@ class Role(db.Model):
     name = db.Column(db.String(50), nullable=False)
     specializations = db.relationship('Specialization', backref='role', lazy=True)
     def __init__(self, name):
+        name.lower()
         self.name = name
         
     def __repr__(self):
@@ -124,6 +130,7 @@ class Buff(db.Model):
     specialization_id = db.Column(db.Integer, db.ForeignKey('specializations.id'), nullable=False)
 
     def __init__(self, name, raidscore, spec_id):
+        name.lower()
         self.name = name
         self.raidscore = raidscore
         self.specialization_id = spec_id
