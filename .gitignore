@@ -3,5 +3,12 @@
 /.main.py.~undo-tree~
 /.app.py.~undo-tree~
 /..env.~undo-tree~
-/*~undo-tree~
-app/.*.~undo-tree~	
+/app/.__init__.py.~undo-tree~
+/app/.data.py.~undo-tree~
+/app/.models.py.~undo-tree~
+/app/.routes.py.~undo-tree~
+app/.__init__.py.~undo-tree~
+app/.data.py.~undo-tree~
+app/.models.py.~undo-tree~
+
+/app/__pycache__/
