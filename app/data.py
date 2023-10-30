@@ -103,6 +103,6 @@ def load_balton():
     sched = Schedule(player_id=BALTON.id, available = [0,1,1,0,0,1,0])
     db.session.add(sched)
     # check that scheduling works
-    # check = Schedule.query.filter_by(player_id=BALTON.id).first()
-    # print(check)
-    # check.printWeek()
+    check = Schedule.query.filter_by(player_id=BALTON.id).first()
+    print(check)
+    check.printWeek()
