@@ -11,9 +11,9 @@ Download the codebase and install dependencies
 ```bash
 git clone https://github.com/ajn2004/group_raiding
 cd group_raiding
-pip install filestuff
+pip install -r requirements.txt
 ```
-This will download the project to your machine.
+This will download the project to your machine and install the necessary libraries to run the code.
 
 # Flask App
 The [main.py](main.py) is the entry point for the [Flask](https://flask.palletsprojects.com/en/3.0.x/) arm of the project. It defines several functions to ease database creation and allows the running of the flask project from the project directory
