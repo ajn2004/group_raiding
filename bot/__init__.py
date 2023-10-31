@@ -3,6 +3,7 @@ from app.models import *
 from app import app
 import os
 import random
+from discord.ext import commands
 
 # from discord.commands import slash_commands
 
@@ -10,6 +11,7 @@ import random
 intents = discord.Intents.default()
 intents.guild_messages = True
 intents.messages = True
+intents.members = True
 intents.message_content =True
 intents.guilds = True
 permissions = discord.Permissions()
