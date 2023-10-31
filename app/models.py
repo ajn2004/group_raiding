@@ -17,6 +17,9 @@ class Player(db.Model):
         name.lower()
         self.name = name
         self.discord_id = discord_id
+
+    def addTokens(self, tokens :int):
+        self.piter_death_tokens += tokens
         
     def __repr__(self):
         return f'<Player {self.name} {self.discord_id}>'
