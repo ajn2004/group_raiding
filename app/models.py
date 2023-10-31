@@ -10,13 +10,16 @@ class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique = True, nullable=False)
     characters = db.relationship('Character', backref='player', lazy=True)
-
-    def __init__(self, name):
+    discord_id = db.Column(db.BigInteger)
+    piter_death_tokens = db.Column(db.Integer)
+    
+    def __init__(self, name, discord_id = 0):
         name.lower()
         self.name = name
+        self.discord_id = discord_id
         
     def __repr__(self):
-        return f'<Player {self.name}>'
+        return f'<Player {self.name} {self.discord_id}>'
 
 class Schedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,11 +35,16 @@ class Schedule(db.Model):
 
     def __repr__(self) -> str:
         # player = Player.query.filter_by(id = self.player_id).first()
-        return f'<Schedule {self.available} player {self.player.name}>'
+        outString = self.weekString()
+        return f'<player {self.player.name}\n| Sun | Mon | Tue | Wed | Thu | Fri | Sat |\n|-----+-----+-----+-----+-----+-----+-----|\n{outString}>'
 
     def printWeek(self) -> None:
         print('| Sun | Mon | Tue | Wed | Thu | Fri | Sat |')
         print('|-----+-----+-----+-----+-----+-----+-----|')
+        weekstr = self.weekString()
+        print(weekstr)
+
+    def weekString(self) -> str:
         days = bin2days(self.available)
         weekstr = '|'
         for day in days:
@@ -44,8 +52,10 @@ class Schedule(db.Model):
               weekstr += ' yes |'
             else:
               weekstr += ' no  |'
-        print(weekstr)
-        print(days)
+        return weekstr
+    
+    def getWeek(self) -> list:
+        return bin2days(self.available)
             
 
 def days2bin(days=[0,0,0,0,0,0,0]):
