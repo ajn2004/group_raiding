@@ -47,8 +47,24 @@ async def on_ready():
 async def on_message(message):
     # Randomly react to non-bot messages
     if message.author.id != 1168641939873202196:
+        # Generate a random interger
         number = random.randint(0,1000)
-        if number <= 100:
+        if number <= 100: # set threshold for success
+            with app.app_context(): 
+                session = db.session
+                try:
+                    player = session.query(Player).filter_by(discord_id = message.author.id).first()
+                    if player:
+                        # Add tokens to the player
+                        player.addTokens(100)
+                        session.add(player)
+                        session.commit()
+                except Exception as e:
+                    session.rollback()
+                    print(f"An error occurred: {e}")
+                finally:
+                    session.close()
+            # Grab pdt reaction
             custom_emoji = discord.utils.get(bot.emojis, name='pdt')
             await message.add_reaction(custom_emoji)
     await bot.process_commands(message)
