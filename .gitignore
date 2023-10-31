@@ -12,3 +12,6 @@ app/.data.py.~undo-tree~
 app/.models.py.~undo-tree~
 
 /app/__pycache__/
+*.py
+/migrations/
+/app/.bot.py.~undo-tree~

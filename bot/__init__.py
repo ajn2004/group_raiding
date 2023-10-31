@@ -3,6 +3,7 @@ from app.models import *
 from app import app
 import os
 import random
+from discord.ext import commands
 
 # from discord.commands import slash_commands
 
