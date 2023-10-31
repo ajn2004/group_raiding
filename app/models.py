@@ -35,11 +35,16 @@ class Schedule(db.Model):
 
     def __repr__(self) -> str:
         # player = Player.query.filter_by(id = self.player_id).first()
-        return f'<Schedule {self.available} player {self.player.name}>'
+        outString = self.weekString()
+        return f'<player {self.player.name}\n| Sun | Mon | Tue | Wed | Thu | Fri | Sat |\n|-----+-----+-----+-----+-----+-----+-----|\n{outString}>'
 
     def printWeek(self) -> None:
         print('| Sun | Mon | Tue | Wed | Thu | Fri | Sat |')
         print('|-----+-----+-----+-----+-----+-----+-----|')
+        weekstr = self.weekString()
+        print(weekstr)
+
+    def weekString(self) -> str:
         days = bin2days(self.available)
         weekstr = '|'
         for day in days:
@@ -47,8 +52,10 @@ class Schedule(db.Model):
               weekstr += ' yes |'
             else:
               weekstr += ' no  |'
-        print(weekstr)
-        print(days)
+        return weekstr
+    
+    def getWeek(self) -> list:
+        return bin2days(self.available)
             
 
 def days2bin(days=[0,0,0,0,0,0,0]):

@@ -37,7 +37,7 @@ def add_character():
 @app.route('/players')
 def get_players():
     players = Player.query.all()
-    player_data = [{'id': player.id, 'name': player.name} for player in players]
+    player_data = [{'id': player.id, 'name': player.name, 'discord':player.discord_id, 'piterToken':player.piter_death_tokens} for player in players]
     return jsonify(player_data)
 
 @app.route('/schedules')
