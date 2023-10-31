@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from flask_migrate import Migrate
 from dotenv import load_dotenv
 import os
 import secrets
@@ -19,5 +20,5 @@ CORS(app)  # Enable CORS for the app
 # app.register_blueprint(routes.bp)
 from .models import db
 db.init_app(app)
-
+migrate = Migrate(app, db)
 from . import routes

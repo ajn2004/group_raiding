@@ -10,13 +10,15 @@ class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique = True, nullable=False)
     characters = db.relationship('Character', backref='player', lazy=True)
-
-    def __init__(self, name):
+    discord_id = db.Column(db.BigInteger)
+    
+    def __init__(self, name, discord_id = 0):
         name.lower()
         self.name = name
+        self.discord_id = discord_id
         
     def __repr__(self):
-        return f'<Player {self.name}>'
+        return f'<Player {self.name} {self.discord_id}>'
 
 class Schedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
