@@ -7,9 +7,10 @@ To get started with this codebase you need to have [python](https://www.python.o
 ```bash
 sudo apt-get install python3
 ```
-Download and install the codebase to a local folder
+Download the codebase and install dependencies
 ```bash
 git clone https://github.com/ajn2004/group_raiding
 cd group_raiding
+pip install filestuff
 ```
-This will download the flask app and 
+This will download the project to your machine.
