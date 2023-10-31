@@ -11,6 +11,7 @@ class Player(db.Model):
     name = db.Column(db.String(80), unique = True, nullable=False)
     characters = db.relationship('Character', backref='player', lazy=True)
     discord_id = db.Column(db.BigInteger)
+    piter_death_tokens = db.Column(db.Integer)
     
     def __init__(self, name, discord_id = 0):
         name.lower()
