@@ -61,7 +61,12 @@ async def swap(ctx):
     for player in players:
         if player:
             member = ctx.guild.get_member(player.discord_id)
-            print(member)
             if member and member.voice:
-                await member.move_to(channel)
+                # Allow swapping all users to new channels except officer
+                if inCommand[2] != '2':
+                    await member.move_to(channel)
+                else: # Swapping into officer auto should only be officers
+                    if member.id in admins:
+                        await member.move_to(channel)
+    await ctx.send("Everyone was moved to " + channel.name)
     
