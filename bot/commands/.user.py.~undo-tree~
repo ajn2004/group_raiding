@@ -1,9 +1,0 @@
-(undo-tree-save-format-version . 1)
-"68559e20dc94b54904a48a9c64ae88a6eba17fdd"
-[nil nil nil nil (25922 35106 755906 846000) 0 nil]
-([nil nil ((nil rear-nonsticky nil 829 . 830) (nil fontified nil 1 . 830) (1 . 830) (t 25922 34620 850779 817000)) nil (25922 35259 42902 857000) 0 nil])
-([nil current ((#("    await ctx.send(\"subcommand not found\")
-" 0 4 (fontified t) 4 9 (fontified t face font-lock-keyword-face) 9 18 (fontified t) 18 19 (fontified t face (rainbow-delimiters-depth-1-face)) 19 41 (fontified t face font-lock-string-face) 41 42 (fontified t face (rainbow-delimiters-depth-1-face)) 42 43 (fontified t)) . 357) (undo-tree-id2 . -42) (undo-tree-id3 . -11) (undo-tree-id4 . -11) (undo-tree-id5 . -11) (undo-tree-id6 . -11) (undo-tree-id7 . -10) (undo-tree-id8 . -13) (undo-tree-id9 . -11) (undo-tree-id10 . -11) (undo-tree-id11 . -11) (undo-tree-id12 . -43) 368 (t 25922 35106 750563 177000)) nil (25922 35267 377918 535000) 0 nil] [nil nil ((#("    await ctx.send(\"subcommand not found\")
-" 0 4 (fontified t) 4 9 (fontified t face font-lock-keyword-face) 9 18 (fontified t) 18 19 (fontified t face (rainbow-delimiters-depth-1-face)) 19 41 (fontified t face font-lock-string-face) 41 42 (fontified t face (rainbow-delimiters-depth-1-face)) 42 43 (fontified t)) . 357) (undo-tree-id0 . -42) (undo-tree-id1 . -43) (t 25922 35106 750563 177000)) ((357 . 400)) (25922 35259 40419 370000) 0 nil])
-nil
-nil
