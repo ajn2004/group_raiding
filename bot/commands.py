@@ -1,7 +1,7 @@
 from bot import bot
 from app import app
 from app.models import *
-from discord import Interaction
+from discord import Interaction, message
 
 # A command that responds with a personalized message
 @bot.command(name='hello')
@@ -70,3 +70,16 @@ async def swap(ctx):
                 await member.move_to(channel)
     # await ctx.message.delete()
     
+@presyn.command()
+async def officer(ctx):
+    players = []
+    with app.app_context():
+        for admin_id in admins:
+            players.append(Player.query.filter_by(discord_id = admin_id).first())
+        
+    for player in players:
+        if player:
+            member = ctx.guild.get_member(player.discord_id)
+            if member and member.voice:
+                await member.move_to(873716323736231966)
+    # await ctx.message.delete()
