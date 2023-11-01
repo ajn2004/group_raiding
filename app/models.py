@@ -89,13 +89,15 @@ class Character(db.Model):
     class_name = db.Column(db.String(50), nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey('players.id'), nullable=False)
     specializations = db.relationship('Specialization', backref='character', lazy=True)
+    mainAlt = db.Column(db.Boolean)
 
-    def __init__(self, name, class_name, player_id):
+    def __init__(self, name, class_name, player_id, mainAlt = False):
         name.lower()
         self.name = name
         class_name.lower()
         self.class_name = class_name
         self.player_id = player_id
+        self.mainAlt = mainAlt
     
     def __repr__(self):
         return f'<Character {self.name}>'
