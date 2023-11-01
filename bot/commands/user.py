@@ -22,7 +22,8 @@ async def check(ctx):
     with app.app_context():
         player = Player.query.filter_by(discord_id = ctx.author.id).first()
     if player:
-        await ctx.send(f"You have a balance of {player.piter_death_tokens} PiterDeathTokens.")
+        name = player.name
+        await ctx.send(f"{name} has a balance of {player.piter_death_tokens} PiterDeathTokens.")
     else:
         await ctx.send(f"Who are you people?")
     await ctx.message.delete()
