@@ -10,8 +10,6 @@
 app/.__init__.py.~undo-tree~
 app/.data.py.~undo-tree~
 app/.models.py.~undo-tree~
-
 /app/__pycache__/
-*.py
 /migrations/
 /app/.bot.py.~undo-tree~

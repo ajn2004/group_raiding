@@ -51,11 +51,12 @@ async def swap(ctx):
 @presyn.command()
 async def officer(ctx):
     players = []
+    channel = bot.get_channel(873716323736231966)
     with app.app_context():
         for admin_id in admins:
             player = Player.query.filter_by(discord_id = admin_id).first()
             if player:
                 member = ctx.guild.get_member(player.discord_id)
                 if member and member.voice:
-                    await member.move_to(873716323736231966)
+                    await member.move_to(channel)
     await ctx.message.delete()
