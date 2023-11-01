@@ -78,7 +78,12 @@ async def addAlt(ctx):
                     await ctx.send(f"The character {checkCharacter.name} already exists")
                     await ctx.message.delete()
                     return
-                character = Character(name = name, class_name=className, player_id=player.id)
+                alts = Character.query.filter_by(player_id = player.id).first()
+                mainAlt = True
+                if alts:
+                    mainAlt = False
+                    
+                character = Character(name = name, class_name=className, player_id=player.id, mainAlt=mainAlt)
                 db.session.add(character)
                 db.session.commit()
                 await ctx.send(f"Added {character.name} to the database")
