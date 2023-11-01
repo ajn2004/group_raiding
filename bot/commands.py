@@ -11,7 +11,7 @@ async def hello(ctx):
 # @bot.group(invoke_without_command=True)
 
 # Piter Death Token
-@bot.group(invoke_without_command=True)
+@bot.group()
 async def pdt(ctx):
     await ctx.send("subcommand not found")
     pass
@@ -25,6 +25,7 @@ async def check(ctx):
         await ctx.send(f"You have a balance of {player.piter_death_tokens} PiterDeathTokens.")
     else:
         await ctx.send(f"Who are you people?")
+    await ctx.message.delete()
 
 # Admin Commands
 admins = set([219443112567767041,189037705873588226,206240748692045836,245343112891858964])
@@ -33,7 +34,7 @@ async def presyn(ctx):
     #Admin functions authorize usage
     if ctx.author.id not in admins:
         await ctx.send("You're not allowed to do that.")
-        # await ctx.message.delete()
+        await ctx.message.delete()
         return
 
 @presyn.command()
@@ -68,7 +69,7 @@ async def swap(ctx):
             print(member)
             if member and member.voice:
                 await member.move_to(channel)
-    # await ctx.message.delete()
+    await ctx.message.delete()
     
 @presyn.command()
 async def officer(ctx):
@@ -82,4 +83,4 @@ async def officer(ctx):
             member = ctx.guild.get_member(player.discord_id)
             if member and member.voice:
                 await member.move_to(873716323736231966)
-    # await ctx.message.delete()
+    await ctx.message.delete()
