@@ -46,10 +46,10 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     # Randomly react to non-bot messages
-    if message.author.id != 1168641939873202196:
-        # Generate a random interger
+    if message.author.id != 1168641939873202196 and message.channel.id != 849871979326210069:
+        # Generate a random integer
         number = random.randint(0,1000)
-        if number <= 100: # set threshold for success
+        if number <= 30: # set threshold for success
             with app.app_context(): 
                 session = db.session
                 try:
