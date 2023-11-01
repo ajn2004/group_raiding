@@ -28,6 +28,52 @@ async def check(ctx):
         await ctx.send(f"Who are you people?")
     await ctx.message.delete()
 
+@pdt.command()
+async def trade(ctx):
+    inCommand = ctx.message.content.split('!pdt trade')
+    if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
+        await ctx.send(f"To trade PDT use !pdt Player Amount")    
+        await ctx.message.delete()
+        return
+    print(inCommand)
+    toPlayer, amount = inCommand[1][1:].split(' ')
+    toPlayerId = int(toPlayer[2:-1])
+    amount = abs(int(amount))
+    print(toPlayerId)
+    print(amount)
+    if not amount:
+        await ctx.send(f"To trade PDT use !pdt Player Amount")    
+        await ctx.message.delete()
+        return
+    else:
+        with app.app_context():
+            try:
+                player = Player.query.filter_by(discord_id = ctx.author.id).first()
+                # validate user
+                if player:
+                    sendPlayer = Player.query.filter_by(discord_id = toPlayerId).first()
+                    if sendPlayer:
+                        if player.id == sendPlayer.id:
+                            await ctx.send(f"{player.name} that's just passing the same fish back and forth")
+                            return
+                        if player.piter_death_tokens >= amount:
+                            player.piter_death_tokens -= amount
+                            sendPlayer.piter_death_tokens += amount
+                            db.session.add(player)
+                            db.session.add(sendPlayer)
+                            db.session.commit()
+                            await ctx.send(f"{player.name} just sent {amount} PDT to {sendPlayer.name}")
+                        else:
+                            await ctx.send(f"RIP bozo, you're too poor to send {amount}.")
+                    else:
+                        await ctx.send(f"Couldn't find that player in our database")
+            except Exception as e:
+                db.session.rollback()
+                await ctx.send("An error occurred while processing the transaction.")
+                print(f"An error occurred: {e}")
+        await ctx.message.delete()
+        return
+    
 # Code to allow players to interact with our database
 @bot.group()
 async def raid(ctx):
