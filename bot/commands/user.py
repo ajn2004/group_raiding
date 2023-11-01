@@ -65,7 +65,7 @@ async def addAlt(ctx):
         
         # check valid class input
         if className not in classList:
-            await ctx.send(f"Invalid Class: Warrior Hunter Paladin Rogue Druid Death Knight Mage Priest of Warlock")
+            await ctx.send(f"Invalid Class: Warrior Hunter Paladin Rogue Druid Death Knight Mage Priest or Warlock")
             await ctx.message.delete()
             return
 
