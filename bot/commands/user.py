@@ -59,6 +59,7 @@ async def trade(ctx):
                         if player.piter_death_tokens >= amount:
                             player.piter_death_tokens -= amount
                             sendPlayer.piter_death_tokens += amount
+                            player.tokens_spent += amount
                             db.session.add(player)
                             db.session.add(sendPlayer)
                             db.session.commit()
