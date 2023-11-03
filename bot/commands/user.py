@@ -3,6 +3,7 @@ from app import app
 from app.models import *
 from discord import Interaction, message
 from functools import wraps
+from sqlalchemy import desc
 
 # A command that responds with a personalized message
 @bot.command(name='hello')
@@ -27,6 +28,59 @@ async def check(ctx):
     else:
         await ctx.send(f"Who are you people?")
     await ctx.message.delete()
+
+@pdt.command()
+async def top(ctx):
+    inCommand = ctx.message.content.split('!pdt top')
+    await ctx.message.delete()
+    if inCommand[1] == ' ' or inCommand[1] == '':
+        n = 5
+    else:
+        try:
+            n = int(inCommand[1])
+        except:
+            await ctx.send('use `!pdt top n` to see the top N players')
+            n = 5
+    with app.app_context():
+        # get top n players in tokens held, tokens spent, and tokens received
+        top_holders = Player.query.order_by(desc(Player.piter_death_tokens)).limit(n).all()
+        top_spenders = Player.query.order_by(desc(Player.tokens_spent)).limit(n).all()
+        top_earners = Player.query.order_by(desc(Player.tokens_recieved)).limit(n).all()
+    outString = "```\n"
+
+    # Print top holders
+    amounts = []
+    for player in top_holders:
+        amounts.append(player.piter_death_tokens)
+    outString += buildScoreTable(top_holders, amounts, "Holders")
+
+    outString += "\n"
+    # print top spenders
+    amounts = []
+    for spender in top_spenders:
+        amounts.append(spender.tokens_spent)
+    outString += buildScoreTable(top_spenders, amounts, "Spenders")
+
+    outString += "\n"
+    # print top earners
+    amounts = []
+    for player in top_earners:
+        amounts.append(player.tokens_spent)
+    outString += buildScoreTable(top_earners, amounts, "Earners")
+
+    outString += "\n"
+    # end string and send
+    outString += "```"
+    await ctx.send(outString)
+        
+def buildScoreTable(players, amounts, toketype):
+    # Print top table
+    outString = f"-=Top Piter Death Token {toketype} =-\n"
+    outString += "| Rank | Name        | Amount |\n"
+    outString += "|------|-------------|--------|\n"
+    for i in range(len(players)):
+        outString += f"| {str(i + 1).ljust(4)} | {players[i].name.ljust(11)} | {str(amounts[i]).rjust(6)} |\n"
+    return outString
 
 @pdt.command()
 async def trade(ctx):
@@ -59,6 +113,7 @@ async def trade(ctx):
                         if player.piter_death_tokens >= amount:
                             player.piter_death_tokens -= amount
                             sendPlayer.piter_death_tokens += amount
+                            player.tokens_spent += amount
                             db.session.add(player)
                             db.session.add(sendPlayer)
                             db.session.commit()
