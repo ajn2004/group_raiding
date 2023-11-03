@@ -65,7 +65,7 @@ async def top(ctx):
     # print top earners
     amounts = []
     for player in top_earners:
-        amounts.append(player.tokens_spent)
+        amounts.append(player.tokens_recieved)
     outString += buildScoreTable(top_earners, amounts, "Earners")
 
     outString += "\n"
@@ -113,6 +113,7 @@ async def trade(ctx):
                         if player.piter_death_tokens >= amount:
                             player.piter_death_tokens -= amount
                             sendPlayer.piter_death_tokens += amount
+                            sendPlayer.tokens_earned += amount
                             player.tokens_spent += amount
                             db.session.add(player)
                             db.session.add(sendPlayer)
