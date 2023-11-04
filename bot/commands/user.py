@@ -211,7 +211,7 @@ async def editSched(ctx):
 
 @raid.command()
 async def shards(ctx):
-    inCommand = ctx.message.split('!pdt shards')
+    inCommand = ctx.message.content.split('!raid shards')
     if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
         await ctx.send(f"To view shards use !raid shards 'Name'")
         await ctx.message.delete()
@@ -219,7 +219,7 @@ async def shards(ctx):
     with open('data/loot-data.json', 'r') as json_file:
         data = json.load(json_file)
         try:
-            toon = data[inCommand[1].lower()]['received']
+            toon = data[inCommand[1][1:].lower()]['received']
         except:
             await ctx.send("To view shards use !raid shards 'Name'")
             return
