@@ -46,7 +46,7 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     # Randomly react to non-bot messages
-    if message.author.id != 1168641939873202196 and message.channel.id != 849871979326210069:
+    if message.author.id != 1168641939873202196:
         # Generate a random integer
         number = random.randint(0,1000)
         if number <= 90: # set threshold for success
@@ -58,6 +58,8 @@ async def on_message(message):
                         # Add tokens to the player
                         player.addTokens(100)
                         session.add(player)
+                        session.add(Usage(player_id=player.id,
+                                          command='bot :pdt: reaction'))
                         session.commit()
                 except Exception as e:
                     session.rollback()
