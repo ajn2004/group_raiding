@@ -2,6 +2,7 @@ import discord
 from app.models import *
 from app import app
 import os
+from datetime import datetime
 import random
 from discord.ext import commands
 
@@ -59,7 +60,8 @@ async def on_message(message):
                         player.addTokens(100)
                         session.add(player)
                         session.add(Usage(player_id=player.id,
-                                          command='bot :pdt: reaction'))
+                                          command='bot :pdt: reaction',
+                                          timestamp=datetime.utcnow()))
                         session.commit()
                 except Exception as e:
                     session.rollback()

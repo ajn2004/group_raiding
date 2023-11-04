@@ -6,6 +6,7 @@ import json
 from discord import Interaction, message
 from functools import wraps
 from sqlalchemy import desc
+from datetime import datetime
 
 # A command that responds with a personalized message
 @bot.command(name='hello')
@@ -18,7 +19,9 @@ def trackUsage(ctx):
     with app.app_context():
         player = Player.query.filter_by(discord_id = ctx.author.id).first()
         if player:
-            db.session.add(Usage(player_id=player.id,command=ctx.message.content))
+            db.session.add(Usage(player_id=player.id,
+                                 command=ctx.message.content,
+                                 timestamp=datetime.utcnow()))
             db.session.commit()
     return
     
