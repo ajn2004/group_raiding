@@ -1,3 +1,4 @@
+import discord
 from bot import bot
 from app import app
 from app.models import *
@@ -12,10 +13,19 @@ async def hello(ctx):
     await ctx.send(f'Hello, {ctx.author.name}!')
 
 # @bot.group(invoke_without_command=True)
-
+def trackUsage(ctx):
+    # track usage
+    with app.app_context():
+        player = Player.query.filter_by(discord_id = ctx.author.id).first()
+        if player:
+            db.session.add(Usage(player_id=player.id,command=ctx.message.content))
+            db.session.commit()
+    return
+    
 # Piter Death Token
 @bot.group()
 async def pdt(ctx):
+    trackUsage(ctx)
     pass
 
 # @bot.add_command(name="pdt", description="Check your PiterDeathToken Balance")
@@ -134,6 +144,7 @@ async def trade(ctx):
 # Code to allow players to interact with our database
 @bot.group()
 async def raid(ctx):
+    trackUsage(ctx)
     pass
 
 classList = set([

@@ -1,6 +1,7 @@
 from enum import unique
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -10,6 +11,7 @@ class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique = True, nullable=False)
     characters = db.relationship('Character', backref='player', lazy=True)
+    usage = db.relationship('Usage', backref='player', lazy=True)
     discord_id = db.Column(db.BigInteger)
     piter_death_tokens = db.Column(db.Integer)
     tokens_spent = db.Column(db.Integer)
@@ -157,6 +159,19 @@ class Buff(db.Model):
     def __repr__(self):
         return f'<Buff {self.name}>'
 
+class Usage(db.Model):
+    __tablename__ = 'usage'
+
+    id = db.Column(db.Integer, primary_key=True)
+    command = db.Column(db.String(100))
+    player_id = db.Column(db.Integer, db.ForeignKey('players.id'))
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow())
+
+    def __init__(self, command, player_id, timestamp = datetime.utcnow()):
+        self.command = command
+        self.player_id = player_id
+        self.timestamp = timestamp
+        
 # Setup for Flask application, typically in a separate file like app.py
 # from flask import Flask
 # from models import db
