@@ -5,9 +5,22 @@ from discord import Interaction, message
 
 # Admin Commands
 admins = set([219443112567767041,189037705873588226,206240748692045836,245343112891858964])
+# @bot.group(invoke_without_command=True)
+
+def trackUsage(ctx):
+    # track usage
+    with app.app_context():
+        player = Player.query.filter_by(discord_id = ctx.author.id).first()
+        if player:
+            db.session.add(Usage(player_id=player.id,
+                                 command=ctx.message.content,
+                                 timestamp=datetime.utcnow()))
+            db.session.commit()
+    return
 
 @bot.group()
 async def presyn(ctx):
+    trackUsage(ctx)
     #Admin functions authorize usage
     if ctx.author.id not in admins:
         await ctx.send("You're not allowed to do that.")
