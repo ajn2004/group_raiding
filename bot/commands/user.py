@@ -1,6 +1,7 @@
 from bot import bot
 from app import app
 from app.models import *
+import json
 from discord import Interaction, message
 from functools import wraps
 from sqlalchemy import desc
@@ -207,6 +208,28 @@ async def addSched(ctx):
 @raid.command()
 async def editSched(ctx):
     pass
+
+@raid.command()
+async def shards(ctx):
+    inCommand = ctx.message.content.split('!raid shards')
+    if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
+        await ctx.send(f"To view shards use !raid shards 'Name'")
+        await ctx.message.delete()
+        return
+    with open('data/loot-data.json', 'r') as json_file:
+        data = json.load(json_file)
+        try:
+            toon = data[inCommand[1][1:].lower()]['received']
+        except:
+            await ctx.send("To view shards use !raid shards 'Name'")
+            return
+    count = 0
+    for item in toon:
+        if item['name'] == 'Shadowfrost Shard':
+            count += 1
+    await ctx.send(f"{inCommand[1]} has received {count} Shadowfrost Shards out of 50")
+    await ctx.message.delete()
+    return
 
 def getPlayer(discord_id):
     with app.app_context():
