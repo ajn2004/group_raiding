@@ -6,14 +6,7 @@ with open('data/character-json.json', 'r') as json_file:
     data = json.load(json_file)
 
 toons = []
-missing_toons ={
-    'derangex':['derangex','druid',True],
-    'hurfnarfaful' : ['gekker','hunter', True],
-    'issild' : ['romsca', 'priest', False],
-    'morogat' : ['moro', 'warrior', True],
-    'mororogue' : ['moro', 'rogue', False],
-    'thumpystump' : ['thumpy', 'shaman', True],
-    }
+
 with app.app_context():
     for datum in data:
         character = Character.query.filter_by(name = datum['slug']).first()
