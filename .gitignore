@@ -13,3 +13,7 @@ app/.models.py.~undo-tree~
 /app/__pycache__/
 /migrations/
 /app/.bot.py.~undo-tree~
+/data/loot-data.json
+/data/character-json.json
+data/*.json
+/data/*.json
