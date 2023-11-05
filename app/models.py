@@ -15,17 +15,14 @@ class Player(db.Model):
     discord_id = db.Column(db.BigInteger)
     piter_death_tokens = db.Column(db.Integer)
     tokens_spent = db.Column(db.Integer)
-    tokens_recieved = db.Column(db.Integer)
+    tokens_received = db.Column(db.Integer)
     
     def __init__(self, name, discord_id = 0):
         name.lower()
         self.name = name
         self.discord_id = discord_id
         self.tokens_spent = 0
-        self.tokens_recieved = 0
-
-    def addTokens(self, tokens :int):
-        self.piter_death_tokens += tokens
+        self.tokens_received = 0
         
     def __repr__(self):
         return f'<Player {self.name} {self.discord_id}>'

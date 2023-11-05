@@ -103,7 +103,7 @@ async def trade(ctx):
         await ctx.send(f"To trade PDT use !pdt Player Amount")    
         await ctx.message.delete()
         return
-    print(inCommand)
+    print(inCommand[1][1:].split(' '))
     toPlayer, amount = inCommand[1][1:].split(' ')
     toPlayerId = int(toPlayer[2:-1])
     amount = abs(int(amount))
@@ -126,9 +126,9 @@ async def trade(ctx):
                             return
                         if player.piter_death_tokens >= amount:
                             player.piter_death_tokens -= amount
-                            sendPlayer.piter_death_tokens += amount
-                            sendPlayer.tokens_earned += amount
                             player.tokens_spent += amount
+                            sendPlayer.piter_death_tokens += amount
+                            sendPlayer.tokens_received += amount
                             db.session.add(player)
                             db.session.add(sendPlayer)
                             db.session.commit()
