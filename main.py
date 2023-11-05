@@ -1,6 +1,5 @@
 from app import app, db
-from app.models import Player, Character, Specialization, Buff
-from app.data import load_guild
+from app.db.test_data.data import load_guild
 # Create a command line command to initialize the database
 @app.cli.command('db_create')
 def db_create():

@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "group-raiding"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+flask = "^2.3.2"
+flask_cors = "^4.0.0"
+py-cord = "^2.4.1"
+Flask-Migrate = "^4.0.5"
+flask_sqlalchemy = "^3.1.1"
+sqlalchemy = "^2.0.19"
+discord = "^2.3.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
