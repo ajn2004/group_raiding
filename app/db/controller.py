@@ -15,6 +15,7 @@ class DBController:
                         receiver.piter_death_tokens += trade_object['amount']
                         sender.tokens_spent += trade_object['amount']
                         receiver.tokens_received += trade_object['amount']
+                        return f"{sender.name} sent {trade_object['amount']} of PDT to {receiver.name}"
                 else:
                     return "Invalid Receiver"
             else:
