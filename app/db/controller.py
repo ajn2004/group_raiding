@@ -38,7 +38,15 @@ class DBController:
             else:
                 return "Invalid Sender"
 
-    
+    def get_guild(self) -> dict:
+        # Return an object of player discord ids
+        guild = {}
+        with session_scope() as session:
+            players  = session.query(Player).all()
+        for player in players:
+            guild[player.name] = player.discord_id
+            
+        return guild
     def get_player(self, player_id) -> dict:
         with session_scope() as session:
             if player := session.query(Player).filter(Player.discord_id == player_id).first():

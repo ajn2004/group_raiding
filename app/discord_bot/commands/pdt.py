@@ -16,6 +16,7 @@ class PiterToken(commands.Cog):
             self.db_controller.track_usage(ctx)
         else:
             await ctx.send(f"Who are you people?")
+            return
                                       
     @pdt_group.command(name='check')
     async def check(self, ctx):
