@@ -1,12 +1,10 @@
-import discord
 from bot import bot
-from app import app
-from app.models import *
 import json
-from discord import Interaction, message
-from functools import wraps
-from sqlalchemy import desc
 from datetime import datetime
+
+from app.db.controller import DBController
+
+db_controller = DBController()
 
 # A command that responds with a personalized message
 @bot.command(name='hello')
@@ -34,9 +32,7 @@ async def pdt(ctx):
 # @bot.add_command(name="pdt", description="Check your PiterDeathToken Balance")
 @pdt.command()
 async def check(ctx):
-    with app.app_context():
-        player = Player.query.filter_by(discord_id = ctx.author.id).first()
-    if player:
+    if player := db_controller.get_player(ctx.author.id):
         name = player.name
         await ctx.send(f"{name} has a balance of {player.piter_death_tokens} PiterDeathTokens.")
     else:
