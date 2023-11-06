@@ -1,10 +1,22 @@
 from app.db.database import session_scope
-from app.db.models import Player
+from app.db.models import Player, Usage
+from datetime import datetime
 
 
 class DBController:
 
-    def trade(self, trade_object) -> str:
+    def track_usage(self, ctx, command = '') -> None:
+        with session_scope() as session:
+            if not command:
+                command = ctx.message.content
+            if player := session.query(Player).filter(Player.discord_id == ctx.author.id).first():
+                session.add(Usage(player_id = player.id,
+                                  command = command,
+                                  timestamp = datetime.utcnow()))
+                session.commit()
+                
+    def pdt_trade(self, trade_object) -> str:
+        
         with session_scope() as session:
             players = session.query(Player)
             # check sender
@@ -15,7 +27,12 @@ class DBController:
                         receiver.piter_death_tokens += trade_object['amount']
                         sender.tokens_spent += trade_object['amount']
                         receiver.tokens_received += trade_object['amount']
+                        session.add(sender)
+                        session.add(receiver)
+                        session.commit()
                         return f"{sender.name} sent {trade_object['amount']} of PDT to {receiver.name}"
+                    else:
+                        return f"RIP bozo! You're too poor to send {trade_object['amount']} {sender.name}"
                 else:
                     return "Invalid Receiver"
             else:
@@ -33,4 +50,4 @@ class DBController:
                     'received' : player.tokens_received
                 }
             else:
-                return {}
+                return {'rip':'bozo'}
