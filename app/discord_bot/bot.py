@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from app.db.controller import DBController
-from app.discord_bot.commands.user_commands import UserCommands
+from app.discord_bot.commands.user_commands import UserCommands, 
 
 # Intents
 intents = discord.Intents.default()
@@ -15,7 +15,7 @@ db_controller = DBController()
 bot = commands.Bot(command_prefix='!', description="A simple reply bot", intents=intents)
 
 # Cogs
-bot.add_cog(UserCommands(bot, db_controller))
+bot.add_cog(pdt(bot, db_controller))
 
 
 @bot.event
