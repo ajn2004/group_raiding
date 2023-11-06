@@ -5,9 +5,9 @@ from sqlalchemy.orm import sessionmaker
 from app.config import USERNAME, PASSWORD, DB_SERVER, DB_NAME
 
 # Dev SQLite engine
-Engine = create_engine(f"sqlite:///sqlite.db")
+# Engine = create_engine(f"sqlite:///sqlite.db")
 # Production Postgres engine
-# Engine = create_engine(f"postgresql://{USERNAME}:{PASSWORD}@{DB_SERVER}/{DB_NAME}")
+Engine = create_engine(f"postgresql://{USERNAME}:{PASSWORD}@{DB_SERVER}/{DB_NAME}")
 
 Session = sessionmaker(bind=Engine)
 
