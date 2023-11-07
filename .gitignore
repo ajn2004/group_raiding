@@ -17,3 +17,4 @@ app/.models.py.~undo-tree~
 /data/character-json.json
 data/*.json
 /data/*.json
+/venv/

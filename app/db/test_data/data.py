@@ -1,4 +1,4 @@
-from .models import *
+from app.db.models import *
 from app import db
 
 def load_guild():
