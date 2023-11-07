@@ -14,7 +14,6 @@ class Raid(commands.Cog):
             'warlock', 'mage', 'priest', 'hunter'    
             ])
 
-
     @commands.group(name='raid')
     async def raid_group(self, ctx):
         if player:= self.db_controller.get_player(ctx.author.id):
@@ -63,7 +62,16 @@ class Raid(commands.Cog):
                 await ctx.send(self.db_controller.add_alt(alt_object))
                 await ctx.message.delete()
                 return
-
+                
+    @raid_group.command(name='noNext')
+    async def noNext(self,ctx):
+        # Return a table of players who have low loot prios
+        inCommand = ctx.message.content.split('!raid noNext')
+        if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
+            await ctx.send(f"To view shards use !raid noNext 'Name'")
+            await ctx.message.delete()
+            return
+        
     @raid_group.command(name='shards')
     async def shards(self, ctx):
         inCommand = ctx.message.content.split('!raid shards')
