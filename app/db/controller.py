@@ -1,5 +1,6 @@
+from sqlalchemy.orm import query
 from app.db.database import session_scope
-from app.db.models import Player, Usage
+from app.db.models import Player, Usage, Character
 from datetime import datetime
 
 
@@ -59,3 +60,18 @@ class DBController:
                 }
             else:
                 return {'rip':'bozo'}
+
+    def add_alt(self, alt_object ={}) -> str:
+        with session_scope() as session:
+            if player := session.query(Player).filter(Player.id == alt_object['player_id']).first():
+                if character := session.query(Character).filter(Character.name == alt_object['name']).first():
+                    return f"The character {character.name} already exists"
+                else:
+                    session.add(Character(name = alt_object['name'],
+                                          class_name = alt_object['class'],
+                                          player_id = alt_object['player_id']
+                                          ))
+                    session.commit()
+                    return f"Added {alt_object['name']} to the database"
+            else:
+                return "Player not found"
