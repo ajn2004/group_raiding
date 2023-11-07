@@ -14,7 +14,6 @@ class Raid(commands.Cog):
             'warlock', 'mage', 'priest', 'hunter'    
             ])
 
-
     @commands.group(name='raid')
     async def raid_group(self, ctx):
         if player:= self.db_controller.get_player(ctx.author.id):
@@ -63,7 +62,46 @@ class Raid(commands.Cog):
                 await ctx.send(self.db_controller.add_alt(alt_object))
                 await ctx.message.delete()
                 return
-
+                
+    @raid_group.command(name='noNext')
+    async def noNext(self,ctx):
+        # Return a table of players who have low loot prios
+        inCommand = ctx.message.content.split('!raid noNext')
+        n = 5 # default this
+        if inCommand[1] ==' ?':
+            await ctx.send('use `!raid noNext n` to see the n lowest loot prio players currently')
+        else:
+            try:
+                n = int(inCommand[1])
+            except:
+                n = 5
+        with open(self.file_name, 'r') as json_file:
+            data = json.load(json_file)
+        # next_prios should be keyed to player
+        next_prios = {}
+        for player in data.keys():
+            if data[player]['raid_group_name'] == 'Presynaptic 25':
+                # player object should have n: number of next drops and a list of what drops
+                next_prios[player] = {'n':0,'prios':[]}
+                # Loop over prios
+                prios = data[player]['prios']
+                for prio in prios:
+                    if prio['pivot']['is_received'] == 0 : # the item is only prio'd
+                        if prio['pivot']['order'] == 1:
+                            next_prios[player]['n']  += 1
+                        next_prios[player]['prios'].append([prio['name'],prio['pivot']['order']])
+        sorted_players = sorted(next_prios.items(), key=lambda x: x[1]['n'])
+        top_n_players = sorted_players[:n]
+        outString = "```\n"
+        outString += f"| {'Player Name'.ljust(11)} | Nexts |\n"
+        outString += f"|{'-'*13}+{'-'*7}|\n"
+        for player, details in top_n_players:
+            outString += f"| {str(player).ljust(11)} | {str(details['n']).rjust(5)} |\n"
+        outString += '```'
+        await ctx.send(outString)
+        await ctx.message.delete()
+                
+        
     @raid_group.command(name='shards')
     async def shards(self, ctx):
         inCommand = ctx.message.content.split('!raid shards')

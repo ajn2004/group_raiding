@@ -32,7 +32,10 @@ class PiterToken(commands.Cog):
             await ctx.send(f"To trade PDT use !pdt Player Amount")    
             await ctx.message.delete()
             return
-        toPlayer, amount = inCommand[1][1:].split(' ')
+
+        splitString = inCommand[1][1:].split(' ')
+        toPlayer = splitString[0]
+        amount = splitString[-1]
         toPlayerId = int(toPlayer[2:-1])
         amount = int(amount)
         # Prevent negative Sends
