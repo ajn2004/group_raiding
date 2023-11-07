@@ -1,5 +1,6 @@
 from discord import player
 from discord.ext import commands
+import json
 
 class Raid(commands.Cog):
     # Administration automation 
@@ -62,3 +63,25 @@ class Raid(commands.Cog):
                 await ctx.send(self.db_controller.add_alt(alt_object))
                 await ctx.message.delete()
                 return
+
+    @raid_group.command(name='shards')
+    async def shards(self, ctx):
+        inCommand = ctx.message.content.split('!raid shards')
+        if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
+            await ctx.send(f"To view shards use !raid shards 'Name'")
+            await ctx.message.delete()
+            return
+        with open(self.file_name, 'r') as json_file:
+            data = json.load(json_file)
+            try:
+                toon = data[inCommand[1][1:].lower()]['received']
+            except:
+                await ctx.send("To view shards use !raid shards 'Name'")
+                return
+        count = 0
+        for item in toon:
+            if item['name'] == 'Shadowfrost Shard':
+                count += 1
+        await ctx.send(f"{inCommand[1]} has received {count} Shadowfrost Shards out of 50")
+        await ctx.message.delete()
+        return
