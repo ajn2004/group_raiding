@@ -57,3 +57,51 @@ class PiterToken(commands.Cog):
         await ctx.send(result)
         await ctx.message.delete()
 
+    @pdt_group.command(name='top')
+    async def top(self, ctx):
+        inCommand = ctx.message.content.split('!pdt top')
+        await ctx.message.delete()
+        if inCommand[1] == ' ' or inCommand[1] == '':
+            n = 5
+        else:
+            try:
+                n = int(inCommand[1])
+            except:
+                await ctx.send('use `!pdt top n` to see the top N players')
+                n = 5
+        leader_boards = self.db_controller.get_pdt_leaderboards(n)
+        outString = "```\n"
+        amounts = {'hold':[],'earn':[],'spend':[]}
+        for i in range(n):
+            amounts['hold'].append(leader_boards['hold'][i].piter_death_tokens)
+            amounts['earn'].append(leader_boards['earn'][i].tokens_received)
+            amounts['spend'].append(leader_boards['spend'][i].tokens_spent)
+        outString += self.buildScoreTable(leader_boards['hold'],amounts['hold'],'Holders')
+        outString += "\n"
+        outString += self.buildScoreTable(leader_boards['earn'],amounts['earn'],'Earners')
+        outString += "\n"
+        outString += self.buildScoreTable(leader_boards['spend'],amounts['spend'],'Spenders')
+        outString += "```"
+        await ctx.send(outString)
+        return
+
+    def buildScoreTable(self, players, amounts, toketype):
+        max_name_length = max(len(player.name) for player in players)
+        max_amount_length = max(len(str(amount)) for amount in amounts)
+        if max_amount_length < 4:
+            max_amount_length = 4
+        
+        outString = f"-=Top Piter Death Token {toketype}=-\n"
+        name_head = 'name'
+        rank_head = 'rank'
+        amnt_head = 'amount'
+
+        outString += f"| {rank_head.ljust(6)} | {name_head.ljust(max_name_length +2)} | {amnt_head.ljust(max_amount_length +2)} |\n"
+        outString += f"|{'-'*8}+{'-'*(4 + max_name_length)}+{'-'*(4+max_amount_length)}|\n"
+        for i, player in enumerate(players):
+            rank = str(i + 1)
+            name = player.name
+            amount = str(amounts[i])
+            outString += f"| {rank.ljust(6)} | {name.ljust(max_name_length + 2)} | {amount.rjust(max_amount_length + 2)} |\n"
+
+        return outString
