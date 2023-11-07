@@ -2,9 +2,8 @@ import discord
 from discord.ext import commands
 
 from app.db.controller import DBController
-from app.discord_bot.commands.pdt import PiterToken
-from app.discord_bot.commands.presyn import Presynapse
-from app.discord_bot.commands.raid import Raid
+from app.discord_bot.commands import PiterToken, Presynapse, Raid
+
 # Intents
 intents = discord.Intents.default()
 intents.guild_messages = True
