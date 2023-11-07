@@ -11,32 +11,20 @@ Download the codebase and install dependencies
 ```bash
 git clone https://github.com/ajn2004/group_raiding
 cd group_raiding
-pip install -r requirements.txt
+poetry install
 ```
 This will download the project to your machine and install the necessary libraries to run the code.
 
-# Flask App
-The [main.py](main.py) is the entry point for the [Flask](https://flask.palletsprojects.com/en/3.0.x/) arm of the project. It defines several functions to ease database creation and allows the running of the flask project from the project directory
-```bash
-export FLASK_APP=main.py
-flask run
-```
-This tells flask to run main.py and allows you to access on your [local endpoint](http://127.0.0.1:5000). This is the starting point for all web page development if we were to go that route.
-
-App behavior is defined in the subfolder, namely [models.py](app/models.py) and [routes.py](app/routes.py). These files define our database models and API behavior respectively. Changing [models.py](app/models.py) will have an impact on our database behavior, and changing [routes.py](app/routes.py) will alter how we serve that information to our users.
-
 # Discord Bot
-The [main_bot.py](main_bot.py) file is the discord bot. It can be run with a simple command
+The [main.py](main.py) file is entry point for the discord bot. It can be run with a simple command
 ```bash
-python3 main_bot.py
+python3 main.py
 ```
 This will launch the bot to connect to the discord server and start hosting commands
 
-## Discord Commands
-Bot behavior is organized in the bot folder. Specifically [commands.py](bot/commands.py) defines various commands and their functions available to the server.
 
 # Postgres Server
-The postgres server can best be understood by studying the [models file](app/models.py). This is a basic relational database intended to model the guild environment. Accessing the server can be done through the [.env file](.env.example).
+The postgres server can best be understood by studying the [models](app/db/models). This is a basic relational database intended to model the guild environment. Accessing the server can be done through the [.env file](.env.example).
 ```
 SQLALCHEMY_DATABASE_USER='YOUR_USER_NAME'
 SQLALCHEMY_DATABASE_PASSWORD='YOUR_PASSWORD'
