@@ -1,6 +1,7 @@
 '''This file should be the central loading point for all memes'''
 import discord
 
+PDT = '<:pdt:1009279728366137425>'
 class Memes:
     memeFile = {
     'patrick':'app/memes/patrick.gif',

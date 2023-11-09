@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from app.db.controller import DBController
-from app.discord_bot.commands import PiterToken, Presynapse, Raid
+from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling
 
 # Intents
 intents = discord.Intents.default()
@@ -31,6 +31,7 @@ bot = commands.Bot(command_prefix='!', description="A simple reply bot", intents
 bot.add_cog(PiterToken(bot, db_controller))
 bot.add_cog(Presynapse(bot, db_controller))
 bot.add_cog(Raid(bot, db_controller))
+bot.add_cog(Gambling(bot, db_controller))
 
 @bot.event
 async def on_ready():
