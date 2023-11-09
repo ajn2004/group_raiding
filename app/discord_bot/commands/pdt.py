@@ -1,4 +1,5 @@
 from discord import player
+import discord
 from discord.ext import commands
 
 class PiterToken(commands.Cog):
@@ -50,6 +51,12 @@ class PiterToken(commands.Cog):
             await ctx.message.delete()
             return
 
+        if ctx.author.id == toPlayerId:
+            with open('app/memes/obama_meme.jpg', 'rb') as f:
+                file = discord.File(f)
+                await ctx.send(f"{ctx.author.nick} tried trading themselves {amount} <:pdt:1009279728366137425>.... good work")
+                await ctx.message.channel.send(file=file)
+                return
         trade_object = {
             'sender' : ctx.author.id,
             'receiver' : toPlayerId,
