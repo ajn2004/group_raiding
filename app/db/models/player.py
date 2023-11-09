@@ -16,6 +16,6 @@ class Player(Base):
     tokens_spent = Column(Integer, default=0)
     tokens_received = Column(Integer, default=0)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<Player {self.name} {self.discord_id}>'
 

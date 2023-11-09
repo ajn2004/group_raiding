@@ -12,6 +12,6 @@ class Buff(Base):
     raidscore = Column(Integer, nullable=True)
     specialization_id = Column(Integer, ForeignKey('specializations.id'), nullable=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<Buff {self.name}>'
 

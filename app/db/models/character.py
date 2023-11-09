@@ -14,6 +14,6 @@ class Character(Base):
     specializations = relationship('Specialization', backref='character', lazy=True)
     mainAlt = Column(Boolean, default=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<Character {self.name}>'
 

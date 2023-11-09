@@ -1,16 +1,17 @@
 from discord import player
+from discord import Bot
 from discord.ext import commands
 
 class Presynapse(commands.Cog):
     # Administration automation 
-    def __init__(self, bot , db_controller):
+    def __init__(self, bot: Bot, db_controller) -> None:
         self.bot = bot
         self.db_controller = db_controller
-        self.admin = set([219443112567767041,189037705873588226,206240748692045836,245343112891858964])
+        self.admin = set([219443112567767041, 189037705873588226, 206240748692045836, 245343112891858964])
 
 
     @commands.group(name='presyn', invoke_without_commands=True)
-    async def presyn_group(self, ctx):
+    async def presyn_group(self, ctx: commands.Context) -> None:
         # Entry point to all admin commands
         if player := self.db_controller.get_player(ctx.author.id):
             # Track any player who uses these commands
@@ -21,7 +22,9 @@ class Presynapse(commands.Cog):
             return
 
     @presyn_group.command(name='swap')
-    async def swap(self, ctx):
+    async def swap(self, ctx: commands.Context) -> None:
+        if not ctx.guild:
+            return
         inCommand = ctx.message.content.split(' ')
         if len(inCommand) != 3:
             await ctx.send("swap takes a single command e.g. !presyn swap 1")
@@ -41,20 +44,23 @@ class Presynapse(commands.Cog):
             '4' : 849869524039368724,
             '5' : 690801950987649076,
             }
-        channel = self.bot.get_channel(channels[inCommand[2]])
+        if channel:=self.bot.get_channel(channels[inCommand[2]]):
+            pass
+        else:
+            return
         # get a list of players
         guild = self.db_controller.get_guild()
 
         # Cycle through players and if they are online move them to a new channel
         for player in guild.keys():
-            member = ctx.guild.get_member(guild[player])
-            if member and member.voice:
-                # Swap to officer should move officers only
-                if inCommand[2] != '2':
-                    await member.move_to(channel)
-                else:
-                    if guild[player] in admins:
+            if member := ctx.guild.get_member(guild[player]):
+                if member.voice:
+                    # Swap to officer should move officers only
+                    if inCommand[2] != '2':
                         await member.move_to(channel)
+                    else:
+                        if guild[player] in admins:
+                            await member.move_to(channel)
         await ctx.message.delete()
 
 
