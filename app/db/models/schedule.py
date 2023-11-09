@@ -9,10 +9,10 @@ class Schedule(Base):
 
     id = Column(Integer, primary_key=True)
     player_id = Column(Integer, ForeignKey('players.id'), nullable=False)
-    available = Column(Integer)  # encoding days available as a 7-bit binary
+    available = Column(Integer, default = 0)  # encoding days available as a 7-bit binary
     player = relationship('Player', backref='schedules')
 
-    def __init__(self, player_id, available=[0, 0, 0, 0, 0, 0, 0]) -> None:
+    def __init__(self, player_id: int, available:list[int] =[0, 0, 0, 0, 0, 0, 0]) -> None:
         if len(available) == 7:
             self.player_id = player_id
             self.available = self.days2bin(available)
@@ -29,7 +29,10 @@ class Schedule(Base):
         print(weekstr)
 
     def weekString(self) -> str:
-        days = self.bin2days(self.available)
+        if type(self.available) == int:
+            days = self.bin2days(int(self.available))
+        else:
+            days = self.bin2days(0)
         weekstr = '|'
         for day in days:
             if day:
@@ -38,11 +41,14 @@ class Schedule(Base):
                 weekstr += ' no  |'
         return weekstr
 
-    def getWeek(self) -> list:
-        return self.bin2days(self.available)
+    def getWeek(self) -> list[int]:
+        if type(self.available) == int:
+            return self.bin2days(int(self.available))
+        else:
+            return [0, 0, 0, 0, 0, 0, 0]
 
 
-    def days2bin(days=[0, 0, 0, 0, 0, 0, 0]):
+    def days2bin(self, days:list[int] =[0, 0, 0, 0, 0, 0, 0]) -> int:
         # days is a binary list so we can create an integer value to story a person's availability
         # the order will be sunday will be the 0 index and saturday will be the 6 index
         number = 0
@@ -52,7 +58,7 @@ class Schedule(Base):
         return number
 
 
-    def bin2days(binNumber) -> list:
+    def bin2days(self, binNumber: int = 0) -> list[int]:
         days = []
 
         for i in range(7):

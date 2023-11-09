@@ -1,36 +1,33 @@
-from discord import player
-import discord
+from discord import Bot
+from app.db.models import Player
 from discord.ext import commands
 from .memes.loadMeme import Memes
 
 class PiterToken(commands.Cog):
-    def __init__(self, bot , db_controller):
+    def __init__(self, bot: Bot, db_controller) -> None:
         self.bot = bot
         self.db_controller = db_controller
         # self.pdt_group = commands.Group(name='pdt', invoke_without_commands=True)
 
     @commands.group(name='pdt', invoke_without_commands=True)
-    async def pdt_group(self, ctx):
+    async def pdt_group(self, ctx: commands.Context) -> None:
         # tracker usage of command
-        print(f"{ctx.author.name} just used pdt")
         if player := self.db_controller.get_player(ctx.author.id):
             # track user engagement
-            print(player)
             self.db_controller.track_usage(ctx)
         else:
             # Get patrick star meme for 'who are you?'
-            print('bing bong')
             await ctx.channel.send(file=Memes().getMeme('patrick'))
             return
                                       
     @pdt_group.command(name='check')
-    async def check(self, ctx):
+    async def check(self, ctx: commands.Context) -> None:
         if player := self.db_controller.get_player(ctx.author.id):
             await ctx.send(f"{player['name']} has a balance of {player['piter_death_tokens']} PiterDeathTokens.")
         await ctx.message.delete()
 
     @pdt_group.command(name='trade')
-    async def trade(self,ctx):
+    async def trade(self,ctx: commands.Context) -> None:
         # Parse incoming trade command
         inCommand = ctx.message.content.split('!pdt trade')
         if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
@@ -70,7 +67,7 @@ class PiterToken(commands.Cog):
         await ctx.message.delete()
 
     @pdt_group.command(name='top')
-    async def top(self, ctx):
+    async def top(self, ctx: commands.Context) -> None:
         inCommand = ctx.message.content.split('!pdt top')
         await ctx.message.delete()
         if inCommand[1] == ' ' or inCommand[1] == '':
@@ -97,8 +94,8 @@ class PiterToken(commands.Cog):
         await ctx.send(outString)
         return
 
-    def buildScoreTable(self, players, amounts, toketype):
-        max_name_length = max(len(player.name) for player in players)
+    def buildScoreTable(self, players: list[Player], amounts: list[int], toketype: str) -> str:
+        max_name_length = max(len(str(player.name)) for player in players)
         max_amount_length = max(len(str(amount)) for amount in amounts)
         if max_amount_length < 4:
             max_amount_length = 4

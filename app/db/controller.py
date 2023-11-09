@@ -1,12 +1,13 @@
 from sqlalchemy.orm import query
 from sqlalchemy import desc
+from discord.ext.commands import Context
 from app.db.database import session_scope
 from app.db.models import Player, Usage, Character
 from datetime import datetime
 
 class DBController:
 
-    def track_usage(self, ctx, command = '') -> None:
+    def track_usage(self, ctx: Context, command: str = '') -> None:
         with session_scope() as session:
             if not command:
                 command = ctx.message.content
@@ -16,7 +17,7 @@ class DBController:
                                   timestamp = datetime.utcnow()))
                 session.commit()
                 
-    def pdt_trade(self, trade_object) -> str:
+    def pdt_trade(self, trade_object: dict) -> str:
         
         with session_scope() as session:
             players = session.query(Player)
@@ -49,7 +50,7 @@ class DBController:
             
         return guild
     
-    def get_player(self, player_id) -> dict:
+    def get_player(self, player_id: int) -> dict:
         with session_scope() as session:
             if player := session.query(Player).filter(Player.discord_id == player_id).first():
                 return {
@@ -58,11 +59,11 @@ class DBController:
                     'piter_death_tokens': player.piter_death_tokens,
                     'spent': player.tokens_spent,
                     'received' : player.tokens_received
-                }
+                    }
             else:
                 return {}
 
-    def get_pdt_leaderboards(self, n =5) -> dict:
+    def get_pdt_leaderboards(self, n:int = 5) -> dict:
         leader_boards = {'hold':[],'spend':[],'earn':[]}
         with session_scope() as session:
             top_holders = session.query(Player).order_by(desc(Player.piter_death_tokens)).limit(n).all()
@@ -71,7 +72,6 @@ class DBController:
         leader_boards['hold'] = top_holders
         leader_boards['earn'] = top_earners
         leader_boards['spend'] = top_spenders
-        
         return leader_boards
         
     def add_alt(self, alt_object ={}) -> str:
@@ -83,7 +83,7 @@ class DBController:
                     session.add(Character(name = alt_object['name'],
                                           class_name = alt_object['class'],
                                           player_id = alt_object['player_id']
-                                          ))
+                                ))
                     session.commit()
                     return f"Added {alt_object['name']} to the database"
             else:

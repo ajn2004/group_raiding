@@ -11,6 +11,6 @@ class Role(Base):
     name = Column(String(50), nullable=False)
     specializations = relationship('Specialization', backref='role', lazy=True)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<Role {self.name}>'
 

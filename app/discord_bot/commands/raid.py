@@ -1,10 +1,10 @@
-from discord import player
+from discord import player, Bot
 from discord.ext import commands
 import json
 
 class Raid(commands.Cog):
     # Administration automation 
-    def __init__(self, bot , db_controller):
+    def __init__(self, bot: Bot , db_controller) -> None:
         self.bot = bot
         self.db_controller = db_controller
         self.file_name = 'data/loot-data.json'
@@ -15,7 +15,7 @@ class Raid(commands.Cog):
             ])
 
     @commands.group(name='raid')
-    async def raid_group(self, ctx):
+    async def raid_group(self, ctx: commands.Context) -> None:
         if player:= self.db_controller.get_player(ctx.author.id):
             self.db_controller.track_usage(ctx)
         else:
@@ -23,7 +23,7 @@ class Raid(commands.Cog):
             return
 
     @raid_group.command(name='addAlt')
-    async def addAlt(self, ctx):
+    async def addAlt(self, ctx: commands.Context) -> None:
         inCommand = ctx.message.content.split('!raid addAlt')
         if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
             await ctx.send(f"To add an alt use !raid addAlt 'Altname' 'Altclass'")
@@ -59,12 +59,13 @@ class Raid(commands.Cog):
                     'player_id' : player['id'],
                     'name' : name,
                     }
+                # load to database and send return string
                 await ctx.send(self.db_controller.add_alt(alt_object))
                 await ctx.message.delete()
                 return
                 
     @raid_group.command(name='noNext')
-    async def noNext(self,ctx):
+    async def noNext(self,ctx: commands.Context) -> None:
         # Return a table of players who have low loot prios
         inCommand = ctx.message.content.split('!raid noNext')
         n = 5 # default this
@@ -90,6 +91,7 @@ class Raid(commands.Cog):
                         if prio['pivot']['order'] == 1:
                             next_prios[player]['n']  += 1
                         next_prios[player]['prios'].append([prio['name'],prio['pivot']['order']])
+        # sort and report
         sorted_players = sorted(next_prios.items(), key=lambda x: x[1]['n'])
         top_n_players = sorted_players[:n]
         outString = "```\n"
@@ -103,7 +105,7 @@ class Raid(commands.Cog):
                 
         
     @raid_group.command(name='shards')
-    async def shards(self, ctx):
+    async def shards(self, ctx: commands.Context) -> None:
         inCommand = ctx.message.content.split('!raid shards')
         if inCommand[1] ==' ' or inCommand[1] == '' or inCommand[1] == ' ?':
             await ctx.send(f"To view shards use !raid shards 'Name'")
