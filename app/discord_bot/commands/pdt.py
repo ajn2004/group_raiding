@@ -1,6 +1,7 @@
 from discord import player
 import discord
 from discord.ext import commands
+from .memes.loadMeme import Memes
 
 class PiterToken(commands.Cog):
     def __init__(self, bot , db_controller):
@@ -14,9 +15,12 @@ class PiterToken(commands.Cog):
         print(f"{ctx.author.name} just used pdt")
         if player := self.db_controller.get_player(ctx.author.id):
             # track user engagement
+            print(player)
             self.db_controller.track_usage(ctx)
         else:
-            await ctx.send(f"Who are you people?")
+            # Get patrick star meme for 'who are you?'
+            print('bing bong')
+            await ctx.channel.send(file=Memes().getMeme('patrick'))
             return
                                       
     @pdt_group.command(name='check')
@@ -52,11 +56,9 @@ class PiterToken(commands.Cog):
             return
 
         if ctx.author.id == toPlayerId:
-            with open('app/memes/obama_meme.jpg', 'rb') as f:
-                file = discord.File(f)
-                await ctx.send(f"{ctx.author.nick} tried trading themselves {amount} <:pdt:1009279728366137425>.... good work")
-                await ctx.message.channel.send(file=file)
-                return
+            await ctx.send(f"{ctx.author.nick} tried trading themselves {amount} <:pdt:1009279728366137425>.... good work")
+            await ctx.message.channel.send(file=Memes().getMeme('obama'))
+            return
         trade_object = {
             'sender' : ctx.author.id,
             'receiver' : toPlayerId,

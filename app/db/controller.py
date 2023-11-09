@@ -60,7 +60,7 @@ class DBController:
                     'received' : player.tokens_received
                 }
             else:
-                return {'rip':'bozo'}
+                return {}
 
     def get_pdt_leaderboards(self, n =5) -> dict:
         leader_boards = {'hold':[],'spend':[],'earn':[]}
