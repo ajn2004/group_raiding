@@ -19,6 +19,8 @@ class Income(commands.Cog):
         add_object = {'player':message.author.id, 'amount' : random.randint(5,15)}
         if self.db_controller.add_pdt(add_object=add_object):
             self.db_controller.track_usage(message, command = f'income of {add_object["amount"]} for message')
+        if random.randint(0,100) < 9:
+            await message.add_reaction(emoji=PDT)
         return
 
     @commands.Cog.listener()
