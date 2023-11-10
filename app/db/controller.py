@@ -1,3 +1,4 @@
+from discord import Message
 from sqlalchemy.orm import query
 from sqlalchemy import desc
 from discord.ext.commands import Context
@@ -7,17 +8,42 @@ from datetime import datetime
 
 class DBController:
 
-    def track_usage(self, ctx: Context, command: str = '') -> None:
+    def track_usage(self, ctx: Context | Message, command: str = '', user: int| None =None) -> None:
         with session_scope() as session:
             if not command:
                 command = ctx.message.content
-            if player := session.query(Player).filter(Player.discord_id == ctx.author.id).first():
+            if not user:
+                user = ctx.author.id
+            if player := session.query(Player).filter(Player.discord_id == user).first():
                 session.add(Usage(player_id = player.id,
                                   command = command,
                                   timestamp = datetime.utcnow()))
                 session.commit()
-                
-    def pdt_trade(self, trade_object: dict) -> str:
+
+    def add_all(self, amount: int = 0) -> bool:
+        with session_scope() as session:
+            players = session.query(Player).all()
+            for player in players:
+                player.piter_death_tokens += amount
+                player.tokens_received += amount
+            session.bulk_save_objects(players)
+            session.commit()
+            return True
+
+        
+    def add_pdt(self, add_object: dict = {'player':0,'amount':0}) -> bool:
+        with session_scope() as session:
+            if player := session.query(Player).filter(Player.discord_id == add_object['player']).first():
+                player.piter_death_tokens += add_object['amount']
+                player.tokens_received += add_object['amount']
+                if player.piter_death_tokens < 0:
+                    player.piter_death_tokens *= 0 # out the balance if negative
+                session.add(player)
+                session.commit()
+                return True
+        return False
+
+    def pdt_trade(self, trade_object: dict = {'sender':0,'receiver':0,'amount':0}) -> str:
         
         with session_scope() as session:
             players = session.query(Player)
