@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from app.db.controller import DBController
-from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling
+from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling, Income
 
 # Intents
 intents = discord.Intents.default()
@@ -10,6 +10,7 @@ intents.guild_messages = True
 intents.messages = True
 intents.members = True
 intents.message_content =True
+intents.reactions = True
 intents.guilds = True
 permissions = discord.Permissions()
 permissions.move_members = True
@@ -32,6 +33,7 @@ bot.add_cog(PiterToken(bot, db_controller))
 bot.add_cog(Presynapse(bot, db_controller))
 bot.add_cog(Raid(bot, db_controller))
 bot.add_cog(Gambling(bot, db_controller))
+bot.add_cog(Income(bot, db_controller))
 
 @bot.event
 async def on_ready():

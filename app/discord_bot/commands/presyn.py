@@ -1,6 +1,7 @@
 from discord import player
 from discord import Bot
 from discord.ext import commands
+from .memes import Memes, PDT
 
 class Presynapse(commands.Cog):
     # Administration automation 
@@ -16,11 +17,31 @@ class Presynapse(commands.Cog):
         if player := self.db_controller.get_player(ctx.author.id):
             # Track any player who uses these commands
             self.db_controller.track_usage(ctx)
+            if ctx.author.id in self.admin:
+                pass
+            else:
+                await ctx.send(f"```/gkick {player['name']}```")
+                return
         else:
             # Send a kind message
-            await ctx.send(f"```/gkick {player.name}```")
+            await ctx.channel.send(file = Memes().getMeme('patrick'))
             return
 
+    @presyn_group.command(name='buy')
+    async def buy(self, ctx: commands.Context) -> None:
+        inCommand = ctx.message.content.split(' ')
+        if len(inCommand) != 3:
+            await ctx.send("buy takes a single command e.g. !presyn buy 100")
+            return
+        try:
+            self.db_controller.add_all(int(inCommand[-1]))
+            await ctx.send(PDT*3 + " BUY"*3 + PDT*3 + f" everyone just got {inCommand[-1]} PDT!")
+            await ctx.message.delete()
+            return
+        except:
+            return
+        
+    
     @presyn_group.command(name='swap')
     async def swap(self, ctx: commands.Context) -> None:
         if not ctx.guild:
