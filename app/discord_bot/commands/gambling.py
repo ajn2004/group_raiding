@@ -1,13 +1,13 @@
 from discord import Bot
 import discord
-from app.db.models import Player
+from app.db.controller import DBController
 from discord.ext import commands
 from .memes.loadMeme import Memes, PDT
 from .modals import pdtBettingModal
 from functools import partial
 
 class Gambling(commands.Cog):
-    def __init__(self, bot: Bot, db_controller) -> None:
+    def __init__(self, bot: Bot, db_controller: DBController) -> None:
         self.bot = bot
         self.db_controller = db_controller
         # self.pdt_group = commands.Group(name='pdt', invoke_without_commands=True)
