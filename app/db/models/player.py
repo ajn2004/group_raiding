@@ -15,6 +15,7 @@ class Player(Base):
     piter_death_tokens = Column(Integer)
     tokens_spent = Column(Integer, default=0)
     tokens_received = Column(Integer, default=0)
+    bets = relationship('Bet', backref='player', lazy=True)
 
     def __repr__(self) -> str:
         return f'<Player {self.name} {self.discord_id}>'
