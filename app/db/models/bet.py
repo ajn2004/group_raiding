@@ -10,7 +10,7 @@ class Bet(Base):
     id = Column(Integer, primary_key=True)
     eventID = Column(Integer, ForeignKey('bet_events.id'), nullable=False)
     player_id = Column(Integer, ForeignKey('players.id'), nullable=False)
-    outcome = Column(Integer, ForeignKey('bet_outcomes.id'), nullable=False) # outcome will be the index of the selected outcomes in the betEvent table
+    outcome = Column(Integer, nullable=False) # outcome will be the index of the selected outcomes in the betEvent table
     amount = Column(Integer, nullable=False)
     resolved = Column(Boolean, default = False)
     
