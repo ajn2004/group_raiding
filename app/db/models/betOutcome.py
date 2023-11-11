@@ -11,3 +11,4 @@ class BetOutcome(Base):
     name = Column(String(80), nullable=False)
     betEvent = Column(Integer, ForeignKey('bet_events.id'), nullable=False)
     outNumber = Column(Integer, nullable = False) # code outcomes by integer
+    bets = relationship('Bet', backref='BetOutcome', lazy=True)
