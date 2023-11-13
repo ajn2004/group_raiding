@@ -3,8 +3,9 @@ from app.db.models import Player
 from discord.ext import commands
 from .memes.loadMeme import Memes
 
+
 class PiterToken(commands.Cog):
-    def __init__(self, bot: Bot, db_controller) -> None:
+    def __init__(self, bot: Bot, db_controller):
         self.bot = bot
         self.db_controller = db_controller
         # self.pdt_group = commands.Group(name='pdt', invoke_without_commands=True)

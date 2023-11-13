@@ -19,7 +19,7 @@ fileConfig(config.config_file_name)
 # target_metdata = None
 import app.db.models  # noqa
 from app.db.models import Base  # noqa
-from app.config import USERNAME, PASSWORD, DB_SERVER, DB_NAME
+# from app.config import USERNAME, PASSWORD, DB_SERVER, DB_NAME
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py.
@@ -30,8 +30,8 @@ target_metadata = Base.metadata
 
 def get_url():
     # load_dotenv()
-    return f"postgresql://{USERNAME}:{PASSWORD}@{DB_SERVER}/{DB_NAME}"
-    # return f"sqlite:///sqlite.db"
+    # return f"postgresql://{USERNAME}:{PASSWORD}@{DB_SERVER}/{DB_NAME}"
+    return f"sqlite:///sqlite.db"
 
 
 context_extra_options = {}
