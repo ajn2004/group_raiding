@@ -1,3 +1,3 @@
 from .bossDown import *
-from wipe_prediction_modal import WipePredictionModal
+from .wipe_prediction_modal import WipePredictionModal
 
