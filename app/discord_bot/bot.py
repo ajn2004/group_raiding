@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from app.db.controller import DBController
-from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling, Income
+from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling, Income, Casino
 
 # Intents
 intents = discord.Intents.default()
@@ -34,6 +34,7 @@ bot.add_cog(Presynapse(bot, db_controller))
 bot.add_cog(Raid(bot, db_controller))
 bot.add_cog(Gambling(bot, db_controller))
 bot.add_cog(Income(bot, db_controller))
+bot.add_cog(Casino(bot, db_controller))
 
 @bot.event
 async def on_ready():

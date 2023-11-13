@@ -20,7 +20,10 @@ class Income(commands.Cog):
         if self.db_controller.add_pdt(add_object=add_object):
             self.db_controller.track_usage(message, command = f'income of {add_object["amount"]} for message')
         if random.randint(0,100) < 9:
-            await message.add_reaction(emoji=PDT)
+            try:
+                await message.add_reaction(emoji=PDT)
+            except Exception as e:
+                print("Unable to react...")
         return
 
     @commands.Cog.listener()
