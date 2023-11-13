@@ -1,3 +1,4 @@
+# from app.config import DISCORD_BOT_TOKEN
 from app.config import DISCORD_BOT_TOKEN
 from app.discord_bot.bot import bot
 
