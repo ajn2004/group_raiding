@@ -1,6 +1,6 @@
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 import os
-# load_dotenv()
+load_dotenv()
 DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 USERNAME = os.getenv("SQLALCHEMY_DATABASE_USER")
 PASSWORD = os.getenv("SQLALCHEMY_DATABASE_PASSWORD")
