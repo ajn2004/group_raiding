@@ -4,3 +4,4 @@ from .raid import Raid
 from .gambling import Gambling
 from .income import Income
 from .casino import Casino
+from .sod import SoDiscovery
