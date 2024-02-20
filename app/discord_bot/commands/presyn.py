@@ -1,11 +1,14 @@
-from discord import player
+import time
+from os import name
+from discord import asyncio, message, player
 from discord import Bot
 from discord.ext import commands
-from .memes import Memes, PDT
+from app.db.controller import DBController
+from .memes import FRI, MON, SAT, SUN, THU, TUE, WED, Memes, PDT
 
 class Presynapse(commands.Cog):
     # Administration automation 
-    def __init__(self, bot: Bot, db_controller) -> None:
+    def __init__(self, bot: Bot, db_controller: DBController) -> None:
         self.bot = bot
         self.db_controller = db_controller
         self.admin = set([219443112567767041, 189037705873588226, 206240748692045836, 245343112891858964])
@@ -41,6 +44,43 @@ class Presynapse(commands.Cog):
         except:
             return
         
+    @presyn_group.command(name='schedule')
+    async def schedule(self, ctx: commands.Context) -> None:
+        # spawn a schedule prompt so we can read off the data
+        # prompt = "@everyone what nights would you prefer to raid?"
+        prompt = "everyone what nights would you prefer to raid?"
+        channel_id = 859098239282577418
+        if channel:=self.bot.get_channel(channel_id):
+            message = await channel.send(prompt)
+            pass
+        else:
+            return
+        emojis = [SUN, MON, TUE, WED, THU, FRI, SAT,]
+        for emoji in emojis:
+            await message.add_reaction(emoji=emoji)
+
+        # wait for some time in seconds
+        await asyncio.sleep(10)
+
+        # prepare to count reactions
+        message = await channel.fetch_message(message.id)
+        reaction_counts = {}
+        print(message.reactions)
+        for reaction in message.reactions:
+            if reaction.emoji in emojis:  # Check if the reaction is one of the emojis we're interested in
+                print(reaction.emoji)
+                reaction_counts[str(reaction.emoji)] = reaction.count - 1  # Subtract 1 to exclude the bot's own reaction
+        
+        # Compile and send the summary message
+        summary_message = "Raid night preferences:\n"
+        for emoji, count in reaction_counts.items():
+            print(emoji)
+            print(count)
+            summary_message += f"{emoji}: {count} votes\n"
+        print(summary_message)
+        await channel.send(summary_message)
+                
+        return None
     
     @presyn_group.command(name='swap')
     async def swap(self, ctx: commands.Context) -> None:
