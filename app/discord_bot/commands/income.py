@@ -29,6 +29,8 @@ class Income(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
         if payload.member:
+            if payload.member.id == 1168641939873202196:
+                return
             add_object = {'player':payload.member.id, 'amount' : random.randint(5,15)}
             if str(payload.emoji) == PDT:
                 add_object['amount'] *= random.randint(2,4)
