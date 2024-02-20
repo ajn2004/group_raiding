@@ -49,12 +49,12 @@ class Presynapse(commands.Cog):
     async def schedule(self, ctx: commands.Context) -> None:
         # spawn a schedule prompt so we can read off the data
         # prompt = "@everyone what nights would you prefer to raid?"
-        prompt = "everyone what nights would you prefer to raid this week?"
-        prompt += lock_prompt[next_weekday(datetime.now()).day % RESET_INTERVAL]
+        prompt = "@everyone what nights would you prefer to raid this week?"
+        prompt += lock_prompt[next_weekday(datetime.now(), 0).day % RESET_INTERVAL]
         prompt += lock_prompt[3]
 
         # Send to correct channel (raiding)
-        channel_id = channel_info['bots']
+        channel_id = channel_info['raiding']
 
         # sending logic
         if channel:=self.bot.get_channel(channel_id):
@@ -71,6 +71,7 @@ class Presynapse(commands.Cog):
         # wait for some time in seconds
         days = 2
         await asyncio.sleep(round(3600*24*days))
+        # await asyncio.sleep(30)
 
         # prepare to count reactions
         message = await channel.fetch_message(message.id)
@@ -86,7 +87,7 @@ class Presynapse(commands.Cog):
             summary_message += f"{emoji}: {count} votes\n"
             results.append(count)
         await channel.send(summary_message)
-        raid_strings = handleSchedulePoll(results=results,raids=3)
+        raid_strings = handleSchedulePoll(results=results,raids=2)
 
         # Deliver strings to officer
         if channel := self.bot.get_channel(channel_info['officer']):
