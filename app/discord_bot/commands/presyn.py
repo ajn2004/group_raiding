@@ -1,10 +1,12 @@
+from datetime import datetime
 import time
 from os import name
 from discord import asyncio, message, player
 from discord import Bot
 from discord.ext import commands
 from app.db.controller import DBController
-from .memes import FRI, MON, SAT, SUN, THU, TUE, WED, Memes, PDT
+from app.discord_bot.commands.sod import RESET_INTERVAL
+from .memes import FRI, MON, SAT, SUN, THU, TUE, WED, Memes, PDT, channel_info, handleSchedulePoll, known_sod_reset, lock_prompt, next_weekday
 
 class Presynapse(commands.Cog):
     # Administration automation 
@@ -12,8 +14,7 @@ class Presynapse(commands.Cog):
         self.bot = bot
         self.db_controller = db_controller
         self.admin = set([219443112567767041, 189037705873588226, 206240748692045836, 245343112891858964])
-
-
+            
     @commands.group(name='presyn', invoke_without_commands=True)
     async def presyn_group(self, ctx: commands.Context) -> None:
         # Entry point to all admin commands
@@ -48,38 +49,49 @@ class Presynapse(commands.Cog):
     async def schedule(self, ctx: commands.Context) -> None:
         # spawn a schedule prompt so we can read off the data
         # prompt = "@everyone what nights would you prefer to raid?"
-        prompt = "everyone what nights would you prefer to raid?"
-        channel_id = 859098239282577418
+        prompt = "everyone what nights would you prefer to raid this week?"
+        prompt += lock_prompt[next_weekday(datetime.now()).day % RESET_INTERVAL]
+        prompt += lock_prompt[3]
+
+        # Send to correct channel (raiding)
+        channel_id = channel_info['bots']
+
+        # sending logic
         if channel:=self.bot.get_channel(channel_id):
             message = await channel.send(prompt)
             pass
         else:
             return
-        emojis = [SUN, MON, TUE, WED, THU, FRI, SAT,]
+
+        # Emoji logic
+        emojis = [MON, TUE, WED, THU, FRI, SAT, SUN]
         for emoji in emojis:
             await message.add_reaction(emoji=emoji)
 
         # wait for some time in seconds
-        await asyncio.sleep(10)
+        days = 2
+        await asyncio.sleep(round(3600*24*days))
 
         # prepare to count reactions
         message = await channel.fetch_message(message.id)
         reaction_counts = {}
-        print(message.reactions)
         for reaction in message.reactions:
             if reaction.emoji in emojis:  # Check if the reaction is one of the emojis we're interested in
-                print(reaction.emoji)
                 reaction_counts[str(reaction.emoji)] = reaction.count - 1  # Subtract 1 to exclude the bot's own reaction
         
         # Compile and send the summary message
         summary_message = "Raid night preferences:\n"
+        results = []
         for emoji, count in reaction_counts.items():
-            print(emoji)
-            print(count)
             summary_message += f"{emoji}: {count} votes\n"
-        print(summary_message)
+            results.append(count)
         await channel.send(summary_message)
-                
+        raid_strings = handleSchedulePoll(results=results,raids=3)
+
+        # Deliver strings to officer
+        if channel := self.bot.get_channel(channel_info['officer']):
+            for raid_string in raid_strings:
+                await channel.send(raid_string)
         return None
     
     @presyn_group.command(name='swap')
