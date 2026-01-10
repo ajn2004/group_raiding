@@ -1,3 +1,19 @@
+Metadata-Version: 2.4
+Name: group-raiding
+Version: 0.1.0
+Summary: Discord bot for guild/admin utilities and a lightweight in-server economy.
+Author-email: Andrew Nelson <andrew@daleego.com>
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: py-cord<3.0.0,>=2.4.1
+Requires-Dist: sqlalchemy<3.0.0,>=2.0.19
+Requires-Dist: python-graphql-client<1.0.0,>=0.4.3
+Requires-Dist: requests-oauthlib<2.0.0,>=1.3.1
+Requires-Dist: requests<3.0.0,>=2.31.0
+Requires-Dist: apscheduler<4.0.0,>=3.10.4
+Requires-Dist: python-dotenv<2.0.0,>=1.0.0
+Requires-Dist: psycopg2-binary<3.0.0,>=2.9.9
+
 # Group Raiding (Synapticity Discord Bot)
 
 Discord bot for guild/admin utilities and a lightweight in-server economy (“PiterDeathTokens”, PDT). The repo is mid-evolution toward a “casino” feature that uses Warcraft Logs (WCL) report data to resolve bets.

@@ -1,5 +1,10 @@
 /.env
 /__pycache__/
+__pycache__/
+*.py[cod]
+*.pyo
+.ruff_cache/
+.mypy_cache/
 /.main.py.~undo-tree~
 /.app.py.~undo-tree~
 /..env.~undo-tree~
@@ -18,3 +23,4 @@ app/.models.py.~undo-tree~
 data/*.json
 /data/*.json
 /venv/
+.venv/

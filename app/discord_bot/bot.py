@@ -1,8 +1,16 @@
+import asyncio
 import discord
 from discord.ext import commands
 
 from app.db.controller import DBController
 from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling, Income, Casino, SoDiscovery
+
+# Python 3.11+ no longer creates a default event loop implicitly for the main thread.
+# Some versions of (py-)cord still call `asyncio.get_event_loop()` during bot init.
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 # Intents
 intents = discord.Intents.default()
@@ -40,4 +48,3 @@ bot.add_cog(SoDiscovery(bot, db_controller))
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
-
