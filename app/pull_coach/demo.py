@@ -13,6 +13,8 @@ from app.pull_coach.coaching import CoachingReplayStage, CoachingSynthesizer
 from app.pull_coach.mechanics import MechanicSchemaError, load_mechanic_registry
 from app.pull_coach.presentation import DiscordPresentationReplayStage
 from app.pull_coach.progression import ProgressionComparator, ProgressionReplayStage
+from app.pull_coach.history.inspect import inspect_snapshot, render_human
+from app.pull_coach.history.sanitize import sanitize_files
 from app.pull_coach.replay import ReplayRunner, ReplaySpeed
 from app.pull_coach.replay.manifest import load_manifest
 from app.web_requests.warcraft_logs import WCLClient, WCLSnapshot, parse_report_code
@@ -116,6 +118,25 @@ def snapshot(args):
     return 0
 
 
+def inspect(args):
+    manifest = load_manifest(args.manifest)
+    selected_ids = [fight_id for _, ids in manifest.encounters for fight_id in ids]
+    if args.fight is not None and str(args.fight) not in selected_ids:
+        raise ValueError(f"fight {args.fight} is not selected by replay manifest {manifest.replay_id}")
+    data = inspect_snapshot(WCLSnapshot.load(manifest.snapshot), fight=args.fight, fight_ids=selected_ids,
+                            replay_id=manifest.replay_id, ability=args.ability,
+                            name=args.name, event_type=args.event_type, death_window_ms=args.death_window_ms)
+    rendered = json.dumps(data, indent=2, sort_keys=True) + "\n" if args.format == "json" else render_human(data) + "\n"
+    if args.output: Path(args.output).write_text(rendered, encoding="utf-8")
+    else: sys.stdout.write(rendered)
+    return 0
+
+
+def sanitize(args):
+    sanitize_files(args.manifest, args.output_snapshot, args.output_manifest)
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -133,10 +154,23 @@ def main(argv=None):
     snap_parser.add_argument("--fight", type=int, action="append", required=True)
     snap_parser.add_argument("--output", required=True)
     snap_parser.add_argument("--manifest", help="optional path for a new replay manifest")
+    inspect_parser = sub.add_parser("inspect", help="inspect a saved snapshot through its replay manifest (offline)")
+    inspect_parser.add_argument("manifest")
+    inspect_parser.add_argument("--fight", type=int)
+    inspect_parser.add_argument("--ability")
+    inspect_parser.add_argument("--name")
+    inspect_parser.add_argument("--event-type")
+    inspect_parser.add_argument("--death-window-ms", type=int, default=8000)
+    inspect_parser.add_argument("--format", choices=["human", "json"], default="human")
+    inspect_parser.add_argument("--output")
+    sanitize_parser = sub.add_parser("sanitize", help="write sanitized snapshot and manifest copies")
+    sanitize_parser.add_argument("manifest")
+    sanitize_parser.add_argument("--output-snapshot", required=True)
+    sanitize_parser.add_argument("--output-manifest", required=True)
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:
-        return replay(args) if args.command == "replay" else snapshot(args)
+        return {"replay": replay, "snapshot": snapshot, "inspect": inspect, "sanitize": sanitize}[args.command](args)
     except (ValueError, MechanicSchemaError) as exc:
         parser.exit(2, f"error: {exc}\n")
 

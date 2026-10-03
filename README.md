@@ -77,6 +77,27 @@ before any check-in, and do not commit actual guild snapshots without explicit
 approval. Credentials are read from environment/config and are never included
 in snapshot or manifest output.
 
+For authorized historical fixture preparation, use the offline inspection and
+sanitization commands. Inspection reports snapshot facts only; it does not assign
+avoidability or failure meaning. A human must verify mechanics before authoring
+definitions. Sanitization writes new files and does not modify source artifacts:
+
+```bash
+uv run python -m app.pull_coach.demo inspect /tmp/presynaptic-night.manifest.json --format human
+uv run python -m app.pull_coach.demo inspect /tmp/presynaptic-night.manifest.json --format json --output /tmp/inspection.json
+uv run python -m app.pull_coach.demo sanitize /tmp/presynaptic-night.manifest.json \
+  --output-snapshot /tmp/authorized-fixture.json \
+  --output-manifest /tmp/authorized-fixture.manifest.json
+uv run python -m app.pull_coach.demo inspect /tmp/authorized-fixture.manifest.json
+```
+
+Workflow: authorized WCL capture → inspect snapshot → human verifies mechanic
+semantics → author mechanic definitions → sanitize historical snapshot → inspect
+sanitized artifact → offline regression replay/baseline. Treat raw capture and
+sanitized fixture as private until a human has checked every identity-bearing
+field; sanitized output is explicitly marked as authorized WCL-derived, not
+synthetic. A sanitized fixture still requires explicit approval before check-in.
+
 Replay from the saved snapshot (no WCL credentials, network, or Discord token):
 
 ```bash
