@@ -250,12 +250,12 @@ def test_reference_snapshot_live_pipeline_matches_replay_for_each_pull(tmp_path)
                for field in first.fields)
     assert any(field.name == "Next-pull priorities" and field.value.strip()
                for field in first.fields)
-    assert any(field.name == "What improved" and field.value.strip()
-               for field in second.fields)
+    assert not any(field.name == "What improved" and field.value.strip()
+                   for field in second.fields)
     from app.pull_coach.models import ProgressionStatus
-    assert any(subject.mechanic_id == "avoidable-blast" and
-               subject.status == ProgressionStatus.STABILIZED
-               for subject in full.pulls[2].stages["progression"].subjects)
+    assert not any(subject.mechanic_id == "avoidable-blast" and
+                   subject.status in (ProgressionStatus.RESOLVED, ProgressionStatus.STABILIZED)
+                   for subject in full.pulls[2].stages["progression"].subjects)
     assert any(subject.mechanic_id == "raid-pulse" and
                subject.status == ProgressionStatus.NEWLY_OBSERVED
                for subject in full.pulls[2].stages["progression"].subjects)

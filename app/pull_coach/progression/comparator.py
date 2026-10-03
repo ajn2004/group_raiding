@@ -2,14 +2,14 @@
 from collections import defaultdict
 
 from app.pull_coach.models import (
-    FindingCategory, ProgressionDelta, ProgressionStatus, PullAnalysis, PullState,
+    ExposureState, FindingCategory, ProgressionDelta, ProgressionStatus, PullAnalysis, PullState,
     Role, Severity,
 )
 from .config import ProgressionConfig
 from .models import BlockerPriority, ProgressionBlocker, ProgressionComparison, ProgressionSubject
 
 COMPARATOR_NAME = "pull-coach-progression"
-COMPARATOR_VERSION = "1"
+COMPARATOR_VERSION = "2"
 _SEVERITY = {Severity.INFO: 0, Severity.LOW: 1, Severity.MEDIUM: 2,
              Severity.HIGH: 3, Severity.CRITICAL: 4}
 _NON_ERROR = {"unavoidable_damage", "healing_check"}
@@ -70,29 +70,40 @@ class ProgressionComparator:
         all_ids = sorted(prior_universe | set(current_stats))
         out_subjects = []
         deltas = []
-        prior_progress = False
-        stabilization = self.config.stabilization_pulls
+        prior_progress = self._has_prior_exposure_progress(ordered)
         for sid in all_ids:
             now = current_stats.get(sid)
-            old = per_pull[-2].get(sid) if previous else None
+            old_index = len(ordered) - 2 if previous else None
+            old = per_pull[old_index].get(sid) if previous else None
+            if sid.startswith("mechanic:"):
+                exposed = lambda i: any(e.mechanic_id == sid.removeprefix("mechanic:") and
+                                        e.state == ExposureState.EXPOSED for e in ordered[i].mechanic_exposures)
+                # Direct observations are comparable even when exposure is unknown.
+                # Exposure is needed only to bridge a gap where no prior finding exists.
+                if old is None:
+                    for i in range(len(ordered) - 2, -1, -1):
+                        if sid in per_pull[i]:
+                            old_index, old = i, per_pull[i][sid]
+                            break
+                        if exposed(i):
+                            break
+            else:
+                if old is None and previous:
+                    old = next((stats[sid] for stats in reversed(per_pull[:-1]) if sid in stats), None)
             if now is None:
-                clean = 0
-                last_active = None
-                for stats in reversed(per_pull):
-                    if sid in stats:
-                        last_active = stats[sid]
-                        break
-                    clean += 1
-                if last_active is not None:
-                    status = ProgressionStatus.STABILIZED if clean >= stabilization else ProgressionStatus.RESOLVED
-                    subject = self._subject(sid, last_active, status, 0)
-                    out_subjects.append(subject)
-                    deltas.append(ProgressionDelta(sid, status, previous.pull.pull_number if previous else None,
-                        current.pull.pull_number, "failure_count", old["count"] if old else 0, 0))
-                    prior_progress = True
+                # Absence carries no evidence of a clean opportunity. Unknown and
+                # not-exposed pulls intentionally leave the causal failure history intact.
                 continue
             if old is None:
                 reappeared = sid in prior_universe
+                if sid.startswith("mechanic:") and reappeared:
+                    # Do not manufacture a zero baseline from unknown/non-exposed
+                    # history. Only an explicit exposed-clean pull establishes zero.
+                    mechanic_id = sid.removeprefix("mechanic:")
+                    reappeared = any(
+                        any(e.mechanic_id == mechanic_id and e.state == ExposureState.EXPOSED
+                            for e in item.mechanic_exposures) and sid not in stats
+                        for item, stats in zip(ordered[:-1], per_pull[:-1]))
                 status = ProgressionStatus.REGRESSED if reappeared else ProgressionStatus.NEWLY_OBSERVED
                 before_count = 0 if reappeared else None
                 subject = self._subject(sid, now, status, now["count"])
@@ -100,15 +111,30 @@ class ProgressionComparator:
                 deltas.append(ProgressionDelta(sid, status, previous.pull.pull_number if previous else None,
                     current.pull.pull_number, "failure_count", before_count, now["count"]))
                 continue
-            count_status = _classify(old["count"], now["count"], self.config.mechanic_count_threshold)
+            missing_previous = old_index is not None and old_index != len(ordered) - 2
+            use_rate = (old.get("opportunities", 0) > 0 and now.get("opportunities", 0) > 0)
+            old_measure = old["count"] / old["opportunities"] if use_rate else old["count"]
+            now_measure = now["count"] / now["opportunities"] if use_rate else now["count"]
+            count_status = _classify(old_measure, now_measure,
+                                     self.config.mechanic_rate_threshold if use_rate else self.config.mechanic_count_threshold)
             severity_status = _classify(old["severity"], now["severity"], self.config.severity_rank_threshold)
-            status = _aggregate_status(count_status, severity_status)
+            resolved = (now["count"] == 0 and now.get("opportunities", 0) > 0 and
+                        (old["count"] > 0 or sid.startswith("mechanic:") and
+                         any((stats := values.get(sid)) is not None and stats["count"] > 0
+                             for values in per_pull[:-1])))
+            stabilized = (sid.startswith("mechanic:") and now["count"] == 0 and
+                          self._exposed_clean_streak(ordered, sid) >=
+                          self.config.stabilization_pulls)
+            status = (ProgressionStatus.STABILIZED if stabilized else
+                      ProgressionStatus.RESOLVED if resolved else
+                      _aggregate_status(count_status, severity_status))
             subject = self._subject(sid, now, status, now["count"])
             out_subjects.append(subject)
-            deltas.append(ProgressionDelta(sid, count_status, previous.pull.pull_number,
-                current.pull.pull_number, "failure_count", old["count"], now["count"]))
+            baseline_number = ordered[old_index].pull.pull_number if old_index is not None else previous.pull.pull_number
+            deltas.append(ProgressionDelta(sid, count_status, baseline_number,
+                current.pull.pull_number, "failure_rate" if use_rate else "failure_count", old_measure, now_measure))
             if old["severity"] != now["severity"]:
-                deltas.append(ProgressionDelta(sid, severity_status, previous.pull.pull_number,
+                deltas.append(ProgressionDelta(sid, severity_status, baseline_number,
                     current.pull.pull_number, "max_severity_rank", old["severity"], now["severity"]))
             prior_progress |= status in (ProgressionStatus.IMPROVED, ProgressionStatus.RESOLVED,
                                          ProgressionStatus.STABILIZED)
@@ -202,7 +228,57 @@ class ProgressionComparator:
                                                for r in records),
                 "death_linked": any(r[4] for r in records),
                 "evidence": tuple(sorted({e.evidence_id for r in records for e in r[0].evidence}))}
+        for exposure in analysis.mechanic_exposures:
+            if exposure.state != ExposureState.EXPOSED:
+                continue
+            sid = f"mechanic:{exposure.mechanic_id}"
+            if sid not in result:
+                result[sid] = {"count": 0, "severity": 0, "mechanic": exposure.mechanic_id,
+                    "category": None, "actor": None, "role": None, "kind": "mechanic",
+                    "repeated": False, "death_linked": False,
+                    "evidence": tuple(sorted(e.evidence_id for e in exposure.evidence)),
+                    "opportunities": exposure.opportunity_count or 0}
+            else:
+                result[sid]["opportunities"] = exposure.opportunity_count or 0
+                result[sid]["evidence"] = tuple(sorted(set(result[sid]["evidence"]) |
+                                                        {e.evidence_id for e in exposure.evidence}))
         return result
+
+    def _exposed_clean_streak(self, ordered, sid):
+        mechanic_id = sid.removeprefix("mechanic:")
+        if not any((stats := self._subjects(item).get(sid)) is not None and stats["count"] > 0
+                   for item in ordered[:-1]):
+            return 0
+        streak = 0
+        for item in reversed(ordered):
+            exposure = next((e for e in item.mechanic_exposures
+                             if e.mechanic_id == mechanic_id), None)
+            if exposure is None or exposure.state != ExposureState.EXPOSED:
+                break
+            stats = self._subjects(item).get(sid)
+            if stats is None or stats["count"] != 0 or not stats.get("opportunities", 0):
+                break
+            streak += 1
+        return streak
+
+    def _has_prior_exposure_progress(self, ordered):
+        history = defaultdict(list)
+        for item in ordered[:-1]:
+            for stats in self._subjects(item).values():
+                if stats["kind"] == "mechanic":
+                    history[stats["mechanic"]].append(stats)
+        latest_transition = {}
+        for values in history.values():
+            for a, b in zip(values, values[1:]):
+                use_rate = a.get("opportunities", 0) > 0 and b.get("opportunities", 0) > 0
+                before = a["count"] / a["opportunities"] if use_rate else a["count"]
+                after = b["count"] / b["opportunities"] if use_rate else b["count"]
+                threshold = (self.config.mechanic_rate_threshold if use_rate
+                             else self.config.mechanic_count_threshold)
+                status = _aggregate_status(_classify(before, after, threshold),
+                    _classify(a["severity"], b["severity"], self.config.severity_rank_threshold))
+                latest_transition[b["mechanic"]] = status
+        return any(status == ProgressionStatus.IMPROVED for status in latest_transition.values())
 
     @staticmethod
     def _subject(sid, stats, status, count):

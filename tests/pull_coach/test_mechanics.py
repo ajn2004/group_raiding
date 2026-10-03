@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -203,3 +204,32 @@ def test_rule_metadata_preserves_timing_and_relationships():
     assert definition.definition_version == "1"
     assert definition.definition.timing_window.start_offset_ms == 100
     assert definition.relationships == {"pairs_with": ["defensive-cooldown"]}
+
+
+def test_exposure_selector_is_explicit_and_legacy_definition_remains_unknown():
+    from app.pull_coach.analysis import PullAnalyzer
+    from app.pull_coach.models import ExposureState
+    from app.pull_coach.progression import ProgressionComparator
+    from app.pull_coach.mechanics.loader import registry_from_dict
+
+    payload = {"schema_version": 1, "definitions": [{
+        "encounter": {"encounter_id": "42", "name": "Boss"}, "mechanic_id": "maze",
+        "name": "Maze", "event_types": ["damage"], "ability_ids": [10],
+        "failure_category": "positioning", "avoidable": True,
+        "exposure": {"event_types": ["cast"], "ability_ids": [11]},
+    }]}
+    registry = registry_from_dict(payload)
+    pull = load_pull_fixture(FIXTURES / "pull-1.json").pull
+    pull = replace(pull, encounter=EncounterIdentity("42", "Boss"))
+    events = [NormalizedEvent(10, EventType.CAST, "opportunity", ability_id=11)]
+    analyzed = PullAnalyzer(registry).analyze(pull, (), events)
+    assert analyzed.mechanic_exposures[0].state == ExposureState.EXPOSED
+    assert analyzed.mechanic_exposures[0].opportunity_count == 1
+    assert analyzed.mechanic_exposures[0].evidence[0].evidence_id == "opportunity"
+    not_reached = PullAnalyzer(registry).analyze(pull, (), ())
+    assert not_reached.mechanic_exposures[0].state == ExposureState.NOT_EXPOSED
+
+    del payload["definitions"][0]["exposure"]
+    legacy = PullAnalyzer(registry_from_dict(payload)).analyze(pull, (), ())
+    assert legacy.mechanic_exposures[0].state == ExposureState.UNKNOWN
+    assert not any(s.subject_id == "mechanic:maze" for s in ProgressionComparator().compare([legacy]).subjects)

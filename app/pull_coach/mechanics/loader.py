@@ -70,10 +70,20 @@ def definitions_from_dict(data: dict[str, Any]) -> tuple[MechanicRule, ...]:
                 stopped_ability_ids=stopped_ids,
                 stopped_ability_metadata_field=item.get("stopped_ability_metadata_field"),
                 relationships=_object_field(item, "relationships"),
+                exposure_event_types=tuple(sorted({EventType(value) for value in
+                    _object_field(item, "exposure").get("event_types", ())}, key=lambda value: value.value)),
+                exposure_ability_ids=tuple(_object_field(item, "exposure").get("ability_ids", ())),
+                exposure_metadata_predicates=_object_field(item, "exposure").get("metadata_predicates", {}),
             ))
             for key, value in (rules[-1].metadata_predicates or {}).items():
                 if value is not None and not isinstance(value, (str, int, float, bool)):
                     raise ValueError(f"metadata_predicates[{key!r}] must be a JSON scalar")
+            for key, value in (rules[-1].exposure_metadata_predicates or {}).items():
+                if value is not None and not isinstance(value, (str, int, float, bool)):
+                    raise ValueError(f"exposure.metadata_predicates[{key!r}] must be a JSON scalar")
+            exposure = _object_field(item, "exposure")
+            if exposure and not rules[-1].exposure_event_types:
+                raise ValueError("exposure.event_types must be non-empty when exposure is configured")
     except (KeyError, TypeError, ValueError) as exc:
         raise MechanicSchemaError(f"invalid mechanic definition: {exc}") from exc
     identities = [(r.definition.encounter.encounter_id, r.definition.mechanic_id) for r in rules]
