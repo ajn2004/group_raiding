@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "replay_id": "reference-example-night",
+  "snapshot": "../fixtures/warcraft_logs/replay_snapshot.json",
+  "baseline": "example-night.expected.json",
+  "report_code": "REFERENCE-NIGHT",
+  "fixture_metadata": {
+    "provenance": "Representative synthetic/reference WCL-shaped corpus; not historical WCL data."
+  },
+  "encounters": [
+    {"encounter_id": "42", "fight_ids": [12, 13, 14]}
+  ],
+  "assertions": {
+    "expected_pull_count": 3,
+    "expected_fight_ids": [12, 13, 14],
+    "pulls": {
+      "12": {"boss_percent": 72.0, "event_count": 1, "ability_exists": 90},
+      "13": {"boss_percent": 41.0, "event_count": 2},
+      "14": {"boss_percent": 0.0, "event_count": 3}
+    }
+  }
+}
