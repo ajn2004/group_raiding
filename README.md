@@ -7,18 +7,18 @@ To get started with this codebase you need to have [python](https://www.python.o
 ```bash
 sudo apt-get install python3
 ```
-Download the codebase and install dependencies
+Download the codebase and install dependencies with [uv](https://docs.astral.sh/uv/)
 ```bash
 git clone https://github.com/ajn2004/group_raiding
 cd group_raiding
-poetry install
+uv sync
 ```
-This will download the project to your machine and install the necessary libraries to run the code.
+This creates the project environment from the committed `pyproject.toml` and `uv.lock`.
 
 # Discord Bot
 The [main.py](main.py) file is entry point for the discord bot. It can be run with a simple command
 ```bash
-python3 main.py
+uv run python main.py
 ```
 This will launch the bot to connect to the discord server and start hosting commands
 
@@ -36,3 +36,34 @@ DISCORD_BOT_TOKEN='YOUR_DISCORD_BOT_API_TOKEN'
 Update these values with your access information and the app should connect automatically.
 
 Of course this requires you to be running a postgres server, or know how to access a running one.
+
+# Pull Coach foundation
+
+`app/pull_coach` contains provider-independent dataclass contracts for reports,
+pulls, actors, normalized events, mechanic observations, evidence-backed
+findings, analysis results, and progression deltas. Domain models do not depend
+on Discord, SQLAlchemy, HTTP clients, or Warcraft Logs response types.
+
+The intended V0 boundary is:
+
+```text
+provider ingestion (future) → normalized events → deterministic analysis
+→ evidence-backed findings → progression comparison → coaching/presentation
+```
+
+Warcraft Logs ingestion will adapt external data into these contracts;
+deterministic analyzers consume the normalized contracts. Persistence,
+coaching, and Discord/web/addon clients will be downstream adapters. This
+foundation defines no provider integration or analysis behavior.
+
+Versioned JSON examples in `app/pull_coach/fixtures` exercise individual pulls
+and ordered raid-night manifests. `load_raid_night_prefix(..., through_pull=N)`
+opens only payloads through N, so replaying a historical prefix cannot read
+later-pull data. Fixture schema version mismatches fail explicitly. Real
+captured historical raid nights and replay tooling are intended for later work.
+
+Run the deterministic, service-free tests with:
+
+```bash
+uv run pytest
+```

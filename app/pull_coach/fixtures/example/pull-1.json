@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "report": {"source": {"provider": "fixture", "source_id": "example"}, "report_code": "EXAMPLE"},
+  "encounter": {"encounter_id": "boss-1", "name": "Example Encounter"},
+  "pull": {"fight_id": "fight-1", "pull_number": 1, "start_timestamp": 1000, "end_timestamp": 2000, "state": "wipe", "boss_percent": 72.5},
+  "actors": [
+    {"actor_id": "player-1", "name": "Sampleplayer", "class_name": "Mage", "spec_name": "Frost", "role": "damage"},
+    {"actor_id": "boss-1", "name": "Example Encounter"}
+  ],
+  "events": [
+    {"timestamp": 1250, "event_type": "damage", "source_actor_id": "boss-1", "target_actor_id": "player-1", "ability_id": 42, "ability_name": "Example Blast", "amount": 1000, "evidence_id": "event-1"}
+  ],
+  "observations": [
+    {"observation_id": "obs-1", "mechanic_id": "example-blast", "timestamp": 1250, "actor_ids": ["player-1"], "evidence": [{"evidence_id": "event-1", "event_ids": ["event-1"]}]}
+  ],
+  "findings": [
+    {"finding_id": "finding-1", "category": "mechanic", "severity": "medium", "fact": {"hit_count": 1}, "evidence": [{"evidence_id": "event-1", "event_ids": ["event-1"]}], "actor_ids": ["player-1"], "roles": ["damage"], "mechanic_id": "example-blast"}
+  ]
+}

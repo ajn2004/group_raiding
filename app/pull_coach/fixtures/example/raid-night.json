@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "report": {"source": {"provider": "fixture", "source_id": "example"}, "report_code": "EXAMPLE"},
+  "pulls": [
+    {"pull_number": 1, "fixture": "pull-1.json"},
+    {"pull_number": 2, "fixture": "pull-2.json"}
+  ],
+  "assertions": {"expected_pull_count": 2}
+}
