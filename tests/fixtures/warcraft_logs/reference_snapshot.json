@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "provider": "warcraftlogs",
+  "provenance": "Synthetic representative WCL-shaped reference fixture; not captured from a live report.",
+  "report": {
+    "code": "REFERENCE01",
+    "startTime": 1000000,
+    "endTime": 1005000,
+    "fights": [{"id": 7, "encounterID": 42, "name": "Reference Boss", "startTime": 1000100, "endTime": 1000400, "kill": false, "inProgress": false, "bossPercentage": 12.5, "fightPercentage": 82.5}],
+    "masterData": {
+      "actors": [{"id": 1, "gameID": 1001, "type": "Player", "name": "Example Player", "server": "Example", "subType": "Mage"}],
+      "abilities": [{"gameID": 90, "name": "Reference Bolt"}]
+    }
+  },
+  "event_pages": {
+    "7": [
+      {"data": [{"type": "cast", "timestamp": 1000110, "sourceID": 1, "abilityGameID": 90}, {"type": "damage", "timestamp": 1000120, "sourceID": 1, "targetID": 2, "abilityGameID": 90, "amount": 120}], "nextPageTimestamp": 1000200},
+      {"data": [{"type": "death", "timestamp": 1000200, "targetID": 1}], "nextPageTimestamp": null}
+    ]
+  }
+}
