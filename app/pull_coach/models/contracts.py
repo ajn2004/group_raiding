@@ -107,6 +107,16 @@ class Actor:
     source: SourceIdentity | None = None
 
 
+def is_raid_player(actor: Actor | None) -> bool:
+    """Return whether normalized authoritative identity marks this actor as a player.
+
+    ``player_name`` is populated by provider adapters only when their authoritative
+    actor metadata identifies a player. Missing actors and unclassified actors are
+    deliberately ineligible.
+    """
+    return actor is not None and actor.player_name is not None
+
+
 @dataclass(frozen=True)
 class NormalizedEvent:
     timestamp: int
@@ -225,6 +235,7 @@ class PullAnalysis:
     summary: SummaryMetrics
     analyzer: AnalysisMetadata
     mechanic_exposures: tuple[MechanicExposure, ...] = ()
+    player_actor_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

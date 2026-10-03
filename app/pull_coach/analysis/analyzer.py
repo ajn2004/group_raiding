@@ -9,12 +9,12 @@ from app.pull_coach.mechanics import MechanicMatch, MechanicRegistry
 from app.pull_coach.models import (
     Actor, AnalysisMetadata, EventType, EvidenceReference, Finding,
     ExposureState, FindingCategory, MechanicExposure, MechanicObservation, NormalizedEvent, PullAnalysis,
-    PullIdentity, Role, Severity, SummaryMetrics,
+    PullIdentity, Role, Severity, SummaryMetrics, is_raid_player,
 )
 from app.pull_coach.analysis.config import AnalyzerConfig
 
 ANALYZER_NAME = "pull-coach-deterministic"
-ANALYZER_VERSION = "2"
+ANALYZER_VERSION = "3"
 
 
 def _subject(event: NormalizedEvent, match: MechanicMatch) -> str | None:
@@ -177,7 +177,8 @@ class PullAnalyzer:
                 for actor_id in finding.actor_ids:
                     mechanic_findings_by_pair[(finding.mechanic_id, actor_id)].append(finding)
         for index, death in ordered:
-            if death.event_type != EventType.DEATH or not death.target_actor_id:
+            if death.event_type != EventType.DEATH or not is_raid_player(
+                    actor_by_id.get(death.target_actor_id)):
                 continue
             lower = death.timestamp - self.config.pre_death_window_ms
             window = [(event, matches) for _, event, matches in damage_events
@@ -246,7 +247,8 @@ class PullAnalyzer:
                 categories.add(finding.fact["failure_category"])
         cats = sorted(categories)
         summary = SummaryMetrics({
-            "death_count": sum(e.event_type == EventType.DEATH for _, e in ordered),
+            "death_count": sum(e.event_type == EventType.DEATH and is_raid_player(
+                actor_by_id.get(e.target_actor_id)) for _, e in ordered),
             "mechanic_observation_count": len(observations),
             "avoidable_damage_total": sum(float(e.amount or 0) for e in avoidable_events),
             "avoidable_damage_event_count": len(avoidable_events),
@@ -269,7 +271,9 @@ class PullAnalyzer:
             for rule in self.registry.rules_for_encounter(pull.encounter)
         )
         return PullAnalysis(pull, tuple(findings), tuple(observations), summary,
-                            AnalysisMetadata(ANALYZER_NAME, ANALYZER_VERSION), exposures)
+                            AnalysisMetadata(ANALYZER_NAME, ANALYZER_VERSION), exposures,
+                            tuple(sorted(actor_id for actor_id, actor in actor_by_id.items()
+                                         if is_raid_player(actor))))
 
     @staticmethod
     def _append_finding(findings, pull, category, severity, fact, evidence, actor_ids,

@@ -20,8 +20,9 @@ def setup():
         {"mechanic_id": "cleanse", "name": "Cleanse", "encounter": {"encounter_id": "boss", "name": "Boss"},
          "event_types": ["dispel"], "stopped_ability_ids": [40], "stopped_ability_metadata_field": "stopped_ability_id", "failure_category": "dispel"},
     ]}
-    actors = (Actor("a", "A", role=Role.DAMAGE), Actor("b", "B", role=Role.HEALER),
-              Actor("c", "C", role=Role.TANK))
+    actors = (Actor("a", "A", player_name="A", role=Role.DAMAGE),
+              Actor("b", "B", player_name="B", role=Role.HEALER),
+              Actor("c", "C", player_name="C", role=Role.TANK))
     return pull, actors, PullAnalyzer(registry_from_dict(definitions))
 
 
@@ -76,6 +77,87 @@ def test_pure_avoidable_and_unavoidable_death_windows_and_actor_role():
     death = next(f for f in unavoidable.findings if f.category == FindingCategory.DEATH)
     assert death.fact["failure_category"] == "healing_check"
     assert not any("healer" in str(f.fact).lower() for f in unavoidable.findings)
+
+
+def test_only_catalogued_player_deaths_create_player_death_facts():
+    pull, actors, analyzer = setup()
+    actors = actors + (Actor("pet", "A's Companion"), Actor("npc", "Encounter Creature"))
+    events = [ev(10_000, EventType.DEATH, "pet-death", target="pet", source=None),
+              ev(20_000, EventType.DEATH, "npc-death", target="npc", source=None),
+              ev(25_000, EventType.DEATH, "unknown-death", target="missing", source=None),
+              ev(30_000, EventType.DEATH, "player-death", target="a", source=None)]
+    result = analyzer.analyze(pull, actors, events)
+    deaths = [f for f in result.findings if f.category == FindingCategory.DEATH]
+    assert [f.actor_ids for f in deaths] == [("a",)]
+    assert result.summary.values["death_count"] == 1
+    assert deaths[0].evidence[0].event_ids == ("player-death",)
+    assert [event.evidence_id for event in events] == [
+        "pet-death", "npc-death", "unknown-death", "player-death"]
+
+
+def test_private_feedback_and_death_facts_are_limited_to_authoritative_players():
+    from app.pull_coach.coaching import CoachingSynthesizer
+    from app.pull_coach.progression import ProgressionComparator
+
+    pull, actors, analyzer = setup()
+    actors += (Actor("pet", "A's Companion"), Actor("npc", "Encounter Creature"))
+    events = [
+        ev(100, EventType.DAMAGE, "player-hit", 10, target="a", amount=10),
+        ev(110, EventType.DAMAGE, "pet-hit", 10, target="pet", amount=10),
+        ev(120, EventType.DAMAGE, "npc-hit", 10, target="npc", amount=10),
+        ev(200, EventType.DEATH, "player-death", target="a", source=None),
+        ev(210, EventType.DEATH, "pet-death", target="pet", source=None),
+        ev(220, EventType.DEATH, "npc-death", target="npc", source=None),
+    ]
+
+    analysis = analyzer.analyze(pull, actors, events)
+    coaching = CoachingSynthesizer().synthesize(
+        analysis, ProgressionComparator().compare([analysis]))
+
+    assert analysis.analyzer.analyzer_version == "3"
+    deaths = [finding for finding in analysis.findings if finding.category == FindingCategory.DEATH]
+    assert [finding.actor_ids for finding in deaths] == [("a",)]
+    assert analysis.summary.values["death_count"] == 1
+    assert {feedback.actor_id for feedback in coaching.private_feedback} == {"a"}
+
+
+def test_first_death_progression_uses_first_player_death_only():
+    from dataclasses import replace
+    from app.pull_coach.progression import ProgressionComparator
+    pull, actors, analyzer = setup()
+    actors += (Actor("pet", "Mirror Image"), Actor("npc", "Niuzao"))
+    early = analyzer.analyze(pull, actors, [
+        ev(10_000, EventType.DEATH, "pet-death", target="pet", source=None),
+        ev(20_000, EventType.DEATH, "npc-death", target="npc", source=None),
+        ev(30_000, EventType.DEATH, "player-death", target="a", source=None),
+    ])
+    no_player_death = analyzer.analyze(pull, actors, [
+        ev(10_000, EventType.DEATH, "pet-death-only", target="pet", source=None)])
+    later_pull = replace(early, pull=replace(pull, fight_id="f2", pull_number=2))
+    first_pull = replace(no_player_death, pull=replace(pull, fight_id="f1", pull_number=1))
+    comparison = ProgressionComparator().compare([first_pull, later_pull])
+    delta = next(d for d in comparison.deltas if d.metric == "first_death_offset_ms")
+    assert delta.current_value == 30_000
+    assert early.summary.values["death_count"] == 1
+    assert no_player_death.summary.values["death_count"] == 0
+
+
+def test_non_player_death_does_not_link_avoidable_mechanic_but_player_death_does():
+    pull, actors, analyzer = setup()
+    actors += (Actor("summon", "Summon"),)
+    non_player = analyzer.analyze(pull, actors, [
+        ev(100, EventType.DAMAGE, "summon-hit", 10, target="summon", amount=10),
+        ev(110, EventType.DEATH, "summon-death", target="summon", source=None),
+    ])
+    player = analyzer.analyze(pull, actors, [
+        ev(100, EventType.DAMAGE, "player-hit", 10, target="a", amount=10),
+        ev(110, EventType.DEATH, "player-death", target="a", source=None),
+    ])
+    from app.pull_coach.progression import ProgressionComparator
+    non_player_comparison = ProgressionComparator().compare([non_player])
+    player_comparison = ProgressionComparator().compare([player])
+    assert not any(subject.death_linked for subject in non_player_comparison.subjects)
+    assert any(subject.death_linked for subject in player_comparison.subjects)
 
 
 def test_window_excludes_old_damage_and_observes_interrupt_dispel_success():

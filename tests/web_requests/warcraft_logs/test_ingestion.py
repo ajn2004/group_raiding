@@ -35,6 +35,21 @@ def test_checked_in_snapshot_replays_and_round_trips(tmp_path):
         "Synthetic representative WCL-shaped" in path.read_text()
 
 
+def test_actor_player_identity_comes_only_from_authoritative_wcl_type():
+    from app.pull_coach.models import is_raid_player
+    report = {"fights": [{"id": 7, "encounterID": 42, "name": "Boss", "startTime": 0,
+                           "endTime": 400}],
+              "masterData": {"actors": [
+                  {"id": 1, "name": "Player", "type": "Player", "subType": "Mage"},
+                  {"id": 2, "name": "NPC disguised by name", "type": "NPC", "subType": "Mage"},
+                  {"id": 3, "name": "Pet", "type": "Pet", "subType": "Hunter"},
+                  {"id": 4, "name": "Unknown", "type": "Environment"}], "abilities": []}}
+    ingestion = WCLClient(WCLConfig()).ingest_fight(
+        WCLSnapshot(report, {7: [{"data": [], "nextPageTimestamp": None}]}), "ABC123", 7)
+    assert [is_raid_player(actor) for actor in ingestion.actors] == [True, False, False, False]
+    assert ingestion.actors[0].player_name == "Player"
+
+
 def test_boss_percent_uses_boss_percentage_not_fight_percentage():
     report = {"fights": [{"id": 7, "encounterID": 42, "name": "Boss", "startTime": 0,
         "endTime": 400, "bossPercentage": 37.2, "fightPercentage": 68.4}],

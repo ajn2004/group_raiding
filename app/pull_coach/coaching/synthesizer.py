@@ -52,7 +52,7 @@ class CoachingSynthesizer:
                     status = "provider_partial" if rejected or selection != provider_selection else "provider"
         public = self._public(selection, by_id)
         text = render(public, self.config.max_rendered_characters)
-        private = self._private(value, candidates)
+        private = self._private(value, candidates, analysis.player_actor_ids)
         return CoachingResult(value, candidates, public, private, text,
             GeneratorMetadata(provider_name, model, f"{self.config.template_version}/prompt-{PROMPT_VERSION}", status),
             ValidationMetadata(tuple(rejected), status.startswith("fallback")))
@@ -151,14 +151,17 @@ class CoachingSynthesizer:
             tuple(get(x) for x in selection.priority_ids))
 
     @staticmethod
-    def _private(value, candidates):
+    def _private(value, candidates, player_actor_ids):
         by_finding = {f.finding_id: f for f in value.findings if f.pull_number == value.pull_number}
+        eligible_players = set(player_actor_ids)
         grouped = {}
         for candidate in candidates:
             for fid in candidate.finding_ids:
                 finding = by_finding.get(fid)
                 if finding:
                     for actor in finding.actor_ids:
+                        if actor not in eligible_players:
+                            continue
                         grouped.setdefault(actor, [set(), set()])[0].add(fid)
                         grouped[actor][1].add(candidate.candidate_id)
         return tuple(PrivatePlayerFeedback(actor, tuple(sorted(ids)), tuple(sorted(cids)))
