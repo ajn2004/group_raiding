@@ -17,6 +17,13 @@ apscheduler = "^3.10.4"
 python-dotenv = "^1.0.0"
 psycopg2-binary = "^2.9.9"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

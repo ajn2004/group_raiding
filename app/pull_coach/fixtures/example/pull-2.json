@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "report": {"source": {"provider": "fixture", "source_id": "example"}, "report_code": "EXAMPLE"},
+  "encounter": {"encounter_id": "boss-1", "name": "Example Encounter"},
+  "pull": {"fight_id": "fight-2", "pull_number": 2, "start_timestamp": 3000, "end_timestamp": 4000, "state": "wipe"},
+  "actors": [], "events": [], "observations": [], "findings": []
+}
