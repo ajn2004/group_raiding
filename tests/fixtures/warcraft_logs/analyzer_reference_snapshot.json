@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "provider": "warcraftlogs",
+  "provenance": "Synthetic representative WCL-shaped analyzer fixture; not a real historical guild log.",
+  "report": {
+    "code": "ANALYSIS01", "startTime": 1000000, "endTime": 1005000,
+    "fights": [{"id": 7, "encounterID": 42, "name": "Reference Boss", "startTime": 1000100, "endTime": 1000400, "kill": false, "inProgress": false}],
+    "masterData": {
+      "actors": [
+        {"id": 1, "type": "Player", "name": "Avoidable Death", "subType": "Mage"},
+        {"id": 2, "type": "Player", "name": "Mixed Death", "subType": "Priest"},
+        {"id": 3, "type": "NPC", "name": "Reference Boss"}
+      ],
+      "abilities": [{"gameID":90,"name":"Avoidable Blast"},{"gameID":91,"name":"Raid Pulse"},{"gameID":92,"name":"Shadow Bolt"},{"gameID":93,"name":"Curse"},{"gameID":94,"name":"Kick"},{"gameID":95,"name":"Cleanse"},{"gameID":99,"name":"Unknown Damage"}]
+    }
+  },
+  "event_pages": {"7": [{"data": [
+    {"type":"damage","timestamp":1000110,"sourceID":3,"targetID":1,"abilityGameID":90,"amount":500},
+    {"type":"damage","timestamp":1000120,"sourceID":3,"targetID":1,"abilityGameID":90,"amount":100},
+    {"type":"death","timestamp":1000130,"targetID":1},
+    {"type":"damage","timestamp":1000200,"sourceID":3,"targetID":2,"abilityGameID":90,"amount":300},
+    {"type":"damage","timestamp":1000210,"sourceID":3,"targetID":2,"abilityGameID":91,"amount":700},
+    {"type":"damage","timestamp":1000220,"sourceID":3,"targetID":2,"abilityGameID":99,"amount":50},
+    {"type":"interrupt","timestamp":1000225,"sourceID":1,"targetID":3,"abilityGameID":94,"extraAbilityGameID":92},
+    {"type":"dispel","timestamp":1000226,"sourceID":2,"targetID":1,"abilityGameID":95,"extraAbilityGameID":93},
+    {"type":"death","timestamp":1000230,"targetID":2}
+  ],"nextPageTimestamp":null}]}
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "registry_version": "analysis-reference-1",
+  "definitions": [
+    {"mechanic_id":"avoidable-blast","name":"Avoidable Blast","encounter":{"encounter_id":"42","name":"Reference Boss"},"event_types":["damage"],"ability_ids":[90],"failure_category":"avoidable_damage","avoidable":true,"definition_version":"fixture-1"},
+    {"mechanic_id":"raid-pulse","name":"Raid Pulse","encounter":{"encounter_id":"42","name":"Reference Boss"},"event_types":["damage"],"ability_ids":[91],"failure_category":"healing_check","avoidable":false,"definition_version":"fixture-1"},
+    {"mechanic_id":"shadow-bolt-interrupt","name":"Shadow Bolt","encounter":{"encounter_id":"42","name":"Reference Boss"},"event_types":["interrupt"],"stopped_ability_ids":[92],"stopped_ability_metadata_field":"stopped_ability_id","failure_category":"interrupt","definition_version":"fixture-1"},
+    {"mechanic_id":"curse-dispel","name":"Curse","encounter":{"encounter_id":"42","name":"Reference Boss"},"event_types":["dispel"],"stopped_ability_ids":[93],"stopped_ability_metadata_field":"stopped_ability_id","failure_category":"dispel","definition_version":"fixture-1"}
+  ]
+}

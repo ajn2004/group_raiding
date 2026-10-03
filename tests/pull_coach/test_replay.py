@@ -29,6 +29,28 @@ def test_three_fight_prefix_is_repeatable_and_stages_only_see_prefix():
     assert [p.ingestion.pull.pull_number for p in three.pulls] == [1, 2, 3]
 
 
+def test_replay_analyzer_stage_consumes_current_ingestion():
+    from app.pull_coach.analysis import PullAnalyzer
+    from app.pull_coach.mechanics import load_mechanic_registry
+    from app.pull_coach.models import PullAnalysis
+
+    class AnalyzerStage:
+        name = "analysis"
+
+        def __init__(self):
+            self.analyzer = PullAnalyzer(load_mechanic_registry(
+                ROOT / "app/pull_coach/mechanics/definitions/reference_analysis.json"))
+
+        def run(self, context):
+            current = context.current
+            return self.analyzer.analyze(current.pull, current.actors, current.events)
+
+    result = ReplayRunner(stages=[AnalyzerStage()]).run(MANIFEST, through_pull=1)
+    analysis = result.pulls[0].stages["analysis"]
+    assert isinstance(analysis, PullAnalysis)
+    assert analysis.pull == result.pulls[0].ingestion.pull
+
+
 def test_selected_subset_keeps_source_pull_numbers_and_replay_sequence(tmp_path):
     manifest = json.loads(MANIFEST.read_text())
     manifest["baseline"] = None
