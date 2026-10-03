@@ -118,11 +118,16 @@ def _load_raid_night(path: str | Path, through_pull: int | None = None) -> RaidN
         # read later-pull fixture data and intentionally omit global assertions.
         if not isinstance(entries, list):
             raise FixtureSchemaError(f"{path}: 'pulls' must be a list")
-        for entry in entries:
+        # A manifest is ordered; a prefix is defined by its first N entries.
+        # Do not even inspect future entry metadata, which may not be valid yet.
+        selected = entries if through_pull is None else entries[:through_pull]
+        for index, entry in enumerate(selected, start=1):
+            if not isinstance(entry, dict):
+                raise FixtureSchemaError(f"{path}: each selected pull entry must be an object")
             if "pull_number" not in entry or "fixture" not in entry:
                 raise FixtureSchemaError(f"{path}: each pull entry requires 'pull_number' and 'fixture'")
-        selected = [entry for entry in entries
-                    if through_pull is None or entry["pull_number"] <= through_pull]
+            if entry["pull_number"] != index:
+                raise FixtureSchemaError(f"{path}: pull entries must be numbered consecutively from 1")
         pulls = tuple(load_pull_fixture(path.parent / entry["fixture"]) for entry in selected)
         if [pull.pull.pull_number for pull in pulls] != [entry["pull_number"] for entry in selected]:
             raise FixtureSchemaError(f"{path}: manifest pull_number does not match fixture payload")

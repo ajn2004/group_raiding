@@ -7,18 +7,18 @@ To get started with this codebase you need to have [python](https://www.python.o
 ```bash
 sudo apt-get install python3
 ```
-Download the codebase and install dependencies
+Download the codebase and install dependencies with [uv](https://docs.astral.sh/uv/)
 ```bash
 git clone https://github.com/ajn2004/group_raiding
 cd group_raiding
-poetry install
+uv sync
 ```
-This will download the project to your machine and install the necessary libraries to run the code.
+This creates the project environment from the committed `pyproject.toml` and `uv.lock`.
 
 # Discord Bot
 The [main.py](main.py) file is entry point for the discord bot. It can be run with a simple command
 ```bash
-python3 main.py
+uv run python main.py
 ```
 This will launch the bot to connect to the discord server and start hosting commands
 
@@ -65,6 +65,5 @@ captured historical raid nights and replay tooling are intended for later work.
 Run the deterministic, service-free tests with:
 
 ```bash
-poetry install
-poetry run pytest
+uv run pytest
 ```

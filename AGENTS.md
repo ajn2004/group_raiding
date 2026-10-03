@@ -290,23 +290,23 @@ Do not rely primarily on E2E tests when a unit or integration test can establish
 
 Use the repository's documented dependency manager and test runner.
 
-The expected direction is Poetry + pytest:
+Use uv + pytest as the canonical project environment:
 
 ```bash
-poetry install
-poetry run pytest
+uv sync
+uv run pytest
 ```
 
 For focused development:
 
 ```bash
-poetry run pytest tests/path/to/test_file.py
+uv run pytest tests/path/to/test_file.py
 ```
 
 or:
 
 ```bash
-poetry run pytest tests/path/to/test_file.py::test_name
+uv run pytest tests/path/to/test_file.py::test_name
 ```
 
 Before completing a change, run:
@@ -677,10 +677,10 @@ List the exact commands run and results.
 Example:
 
 ```text
-poetry run pytest tests/pull_coach -q
+uv run pytest tests/pull_coach -q
 42 passed
 
-poetry run pytest -q
+uv run pytest -q
 87 passed
 ```
 

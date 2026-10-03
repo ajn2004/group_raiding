@@ -105,6 +105,7 @@ class Actor:
 class NormalizedEvent:
     timestamp: int
     event_type: EventType
+    evidence_id: str
     source_actor_id: str | None = None
     target_actor_id: str | None = None
     ability_id: int | str | None = None
@@ -112,9 +113,12 @@ class NormalizedEvent:
     amount: float | None = None
     absorbed: float | None = None
     overkill: float | None = None
-    evidence_id: str = ""
     flags: frozenset[str] = frozenset()
     metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.evidence_id.strip():
+            raise ValueError("normalized events require a non-empty evidence_id")
 
 
 def normalized_event(**kwargs: Any) -> NormalizedEvent:
@@ -148,6 +152,10 @@ class EvidenceReference:
     event_ids: tuple[str, ...] = ()
     description: str | None = None
 
+    def __post_init__(self) -> None:
+        if not self.evidence_id.strip() and not self.event_ids:
+            raise ValueError("an evidence reference must identify an evidence or event ID")
+
 
 @dataclass(frozen=True)
 class MechanicObservation:
@@ -157,6 +165,10 @@ class MechanicObservation:
     actor_ids: tuple[str, ...]
     evidence: tuple[EvidenceReference, ...]
     metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.evidence or not all(isinstance(item, EvidenceReference) for item in self.evidence):
+            raise ValueError("a mechanic observation must include evidence references")
 
 
 @dataclass(frozen=True)
@@ -172,8 +184,8 @@ class Finding:
     related_finding_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.evidence:
-            raise ValueError("a finding must include at least one evidence reference")
+        if not self.evidence or not all(isinstance(item, EvidenceReference) for item in self.evidence):
+            raise ValueError("a finding must include evidence references")
 
 
 @dataclass(frozen=True)
