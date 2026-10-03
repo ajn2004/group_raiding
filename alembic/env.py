@@ -29,6 +29,9 @@ target_metadata = Base.metadata
 
 def get_url():
     # load_dotenv()
+    configured_url = config.get_main_option("sqlalchemy.url")
+    if configured_url and not configured_url.startswith("driver://"):
+        return configured_url
     return f"postgresql://{USERNAME}:{PASSWORD}@{DB_SERVER}/{DB_NAME}"
     # return f"sqlite:///sqlite.db"
 
