@@ -18,7 +18,7 @@ DEFAULT_ENDPOINT = "https://classic.warcraftlogs.com/api/v2/client"
 TOKEN_URL = "https://www.warcraftlogs.com/oauth/token"
 
 REPORT_QUERY = """query($reportCode:String!){reportData{report(code:$reportCode){code revision startTime endTime fights{id encounterID name difficulty kill startTime endTime inProgress bossPercentage fightPercentage friendlyPlayers} masterData{actors{id gameID type name server subType} abilities{gameID name}}}}}"""
-EVENT_QUERY = """query($reportCode:String!,$startTime:Float!,$endTime:Float!,$limit:Int!,$fightIDs:[Int]){reportData{report(code:$reportCode){events(dataType:All,startTime:$startTime,endTime:$endTime,limit:$limit,fightIDs:$fightIDs){data nextPageTimestamp}}}}}"""
+EVENT_QUERY = """query($reportCode:String!,$startTime:Float!,$endTime:Float!,$limit:Int!,$fightIDs:[Int]){reportData{report(code:$reportCode){events(dataType:All,startTime:$startTime,endTime:$endTime,limit:$limit,fightIDs:$fightIDs){data nextPageTimestamp}}}}"""
 
 
 @dataclass(frozen=True)

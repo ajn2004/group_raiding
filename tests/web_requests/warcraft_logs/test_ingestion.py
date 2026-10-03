@@ -1,5 +1,11 @@
 from app.web_requests.warcraft_logs import WCLClient, WCLConfig, parse_report_code
+from app.web_requests.warcraft_logs.client import EVENT_QUERY, REPORT_QUERY
 from app.web_requests.warcraft_logs.snapshot import WCLSnapshot
+
+
+def test_graphql_queries_have_balanced_braces():
+    assert REPORT_QUERY.count("{") == REPORT_QUERY.count("}")
+    assert EVENT_QUERY.count("{") == EVENT_QUERY.count("}")
 
 
 def test_classic_defaults_and_explicit_endpoint():
