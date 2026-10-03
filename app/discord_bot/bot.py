@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from app.db.controller import DBController
-from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling, Income, Casino, SoDiscovery
+from app.discord_bot.commands import PiterToken, Presynapse, Raid, Gambling, Income, Casino, SoDiscovery, PullCoach
 
 # Intents
 intents = discord.Intents.default()
@@ -36,8 +36,8 @@ bot.add_cog(Gambling(bot, db_controller))
 bot.add_cog(Income(bot, db_controller))
 bot.add_cog(Casino(bot, db_controller))
 bot.add_cog(SoDiscovery(bot, db_controller))
+bot.add_cog(PullCoach(bot))
 
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
-

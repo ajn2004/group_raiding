@@ -5,3 +5,4 @@ from .gambling import Gambling
 from .income import Income
 from .casino import Casino
 from .sod import SoDiscovery
+from .pull_coach import PullCoach

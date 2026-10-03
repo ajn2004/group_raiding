@@ -5,9 +5,19 @@
         "data": [
           {
             "abilityGameID": 90,
-            "sourceID": 1,
+            "sourceID": 2,
+            "targetID": 1,
             "timestamp": 1000200,
-            "type": "cast"
+            "amount": 120,
+            "type": "damage"
+          },
+          {
+            "abilityGameID": 90,
+            "sourceID": 2,
+            "targetID": 1,
+            "timestamp": 1000300,
+            "amount": 120,
+            "type": "damage"
           }
         ],
         "nextPageTimestamp": null
@@ -16,18 +26,6 @@
     "13": [
       {
         "data": [
-          {
-            "abilityGameID": 90,
-            "sourceID": 1,
-            "timestamp": 1010200,
-            "type": "cast"
-          },
-          {
-            "abilityGameID": 90,
-            "sourceID": 1,
-            "timestamp": 1010300,
-            "type": "cast"
-          }
         ],
         "nextPageTimestamp": null
       }
@@ -36,22 +34,12 @@
       {
         "data": [
           {
-            "abilityGameID": 90,
-            "sourceID": 1,
+            "abilityGameID": 91,
+            "sourceID": 2,
+            "targetID": 1,
             "timestamp": 1020200,
-            "type": "cast"
-          },
-          {
-            "abilityGameID": 90,
-            "sourceID": 1,
-            "timestamp": 1020300,
-            "type": "cast"
-          },
-          {
-            "abilityGameID": 90,
-            "sourceID": 1,
-            "timestamp": 1020400,
-            "type": "cast"
+            "amount": 120,
+            "type": "damage"
           }
         ],
         "nextPageTimestamp": null
@@ -103,6 +91,10 @@
         {
           "gameID": 90,
           "name": "Reference Bolt"
+        },
+        {
+          "gameID": 91,
+          "name": "Raid Pulse"
         }
       ],
       "actors": [
@@ -111,6 +103,11 @@
           "name": "Reference Player",
           "subType": "Mage",
           "type": "Player"
+        },
+        {
+          "id": 2,
+          "name": "Reference Boss",
+          "type": "NPC"
         }
       ]
     },

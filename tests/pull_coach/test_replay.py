@@ -24,6 +24,7 @@ def test_three_fight_prefix_is_repeatable_and_stages_only_see_prefix():
     runner = ReplayRunner(stages=[Observer()])
     two = runner.run(MANIFEST, through_pull=2)
     three = runner.run(MANIFEST)
+    assert ReplayRunner().run(MANIFEST).baseline_status == "pass"
     assert two.pulls == three.pulls[:2]
     assert seen == [["12"], ["12", "13"], ["12"], ["12", "13"], ["12", "13", "14"]]
     assert [p.ingestion.pull.pull_number for p in three.pulls] == [1, 2, 3]

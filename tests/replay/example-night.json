@@ -14,9 +14,9 @@
     "expected_pull_count": 3,
     "expected_fight_ids": [12, 13, 14],
     "pulls": {
-      "12": {"boss_percent": 72.0, "event_count": 1, "ability_exists": 90},
-      "13": {"boss_percent": 41.0, "event_count": 2},
-      "14": {"boss_percent": 0.0, "event_count": 3}
+      "12": {"boss_percent": 72.0, "event_count": 2, "ability_exists": 90},
+      "13": {"boss_percent": 41.0, "event_count": 0},
+      "14": {"boss_percent": 0.0, "event_count": 1}
     }
   }
 }
