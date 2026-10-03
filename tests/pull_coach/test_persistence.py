@@ -161,3 +161,27 @@ def test_coaching_metadata_can_be_written_without_generator_dependency():
 
 def test_legacy_metadata_is_registered():
     assert {"players", "characters", "roles", "schedule"}.issubset(Base.metadata.tables)
+
+
+def test_analyzer_healing_window_persists_without_duplicate_finding_ids():
+    from app.pull_coach.analysis import PullAnalyzer
+    from app.pull_coach.mechanics import registry_from_dict
+    from app.pull_coach.models import Actor, EventType, NormalizedEvent
+
+    pull = analysis().pull
+    actors = (Actor("actor-1", "Actor", role=Role.DAMAGE),)
+    registry = registry_from_dict({"schema_version": 1, "definitions": [{
+        "mechanic_id": "pulse", "name": "Pulse",
+        "encounter": {"encounter_id": "boss-1", "name": "Boss"},
+        "event_types": ["damage"], "ability_ids": [20],
+        "failure_category": "healing_check", "avoidable": False,
+    }]})
+    events = [NormalizedEvent(i, EventType.DAMAGE, f"pulse-{i}", "boss", "a",
+                              ability_id=20, amount=10) for i in range(20)]
+    result = PullAnalyzer(registry).analyze(pull, actors, events)
+    assert len({finding.finding_id for finding in result.findings}) == len(result.findings)
+    engine = repository()
+    with Session(engine) as session:
+        repo = PullCoachRepository(session)
+        repo.save_analysis(result)
+        assert session.scalar(select(func.count()).select_from(PullCoachFinding)) == len(result.findings)
