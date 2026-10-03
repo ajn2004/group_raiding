@@ -63,6 +63,11 @@ class MechanicRegistry:
         return tuple(rule.definition for rule in self._rules
                      if rule.definition.encounter.encounter_id == encounter.encounter_id)
 
+    @property
+    def definitions(self) -> tuple[MechanicDefinition, ...]:
+        """All configured definitions, in stable registry order."""
+        return tuple(rule.definition for rule in self._rules)
+
     def match(self, encounter: EncounterIdentity, event: NormalizedEvent) -> tuple[MechanicMatch, ...]:
         matches = []
         for rule in self._rules:

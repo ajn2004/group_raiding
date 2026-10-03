@@ -151,7 +151,7 @@ def test_mocked_wcl_reaches_real_pipeline_and_command(monkeypatch):
             self.event_fights = []
 
         def graphql(self, query, variables):
-            if "fights{" in query:
+            if "fights {" in query:
                 return {"data": {"reportData": {"report": report}}}
             fight_id = int(variables["fightIDs"][0])
             self.event_fights.append(fight_id)
@@ -210,7 +210,7 @@ def test_reference_snapshot_live_pipeline_matches_replay_for_each_pull(tmp_path)
             self.event_fights = []
 
         def graphql(self, query, variables):
-            if "fights{" in query:
+            if "fights {" in query:
                 return {"data": {"reportData": {"report": report}}}
             fight_id = str(variables["fightIDs"][0])
             self.event_fights.append(fight_id)
