@@ -1,0 +1,120 @@
+{
+  "event_pages": {
+    "12": [
+      {
+        "data": [
+          {
+            "abilityGameID": 90,
+            "sourceID": 1,
+            "timestamp": 1000200,
+            "type": "cast"
+          }
+        ],
+        "nextPageTimestamp": null
+      }
+    ],
+    "13": [
+      {
+        "data": [
+          {
+            "abilityGameID": 90,
+            "sourceID": 1,
+            "timestamp": 1010200,
+            "type": "cast"
+          },
+          {
+            "abilityGameID": 90,
+            "sourceID": 1,
+            "timestamp": 1010300,
+            "type": "cast"
+          }
+        ],
+        "nextPageTimestamp": null
+      }
+    ],
+    "14": [
+      {
+        "data": [
+          {
+            "abilityGameID": 90,
+            "sourceID": 1,
+            "timestamp": 1020200,
+            "type": "cast"
+          },
+          {
+            "abilityGameID": 90,
+            "sourceID": 1,
+            "timestamp": 1020300,
+            "type": "cast"
+          },
+          {
+            "abilityGameID": 90,
+            "sourceID": 1,
+            "timestamp": 1020400,
+            "type": "cast"
+          }
+        ],
+        "nextPageTimestamp": null
+      }
+    ]
+  },
+  "provenance": "Representative synthetic/reference WCL-shaped three-pull corpus; not captured from a live historical report.",
+  "provider": "warcraftlogs",
+  "report": {
+    "code": "REFERENCE-NIGHT",
+    "endTime": 1030000,
+    "fights": [
+      {
+        "bossPercentage": 72.0,
+        "encounterID": 42,
+        "endTime": 1005100,
+        "fightPercentage": 72.0,
+        "id": 12,
+        "inProgress": false,
+        "kill": false,
+        "name": "Reference Boss",
+        "startTime": 1000100
+      },
+      {
+        "bossPercentage": 41.0,
+        "encounterID": 42,
+        "endTime": 1015100,
+        "fightPercentage": 41.0,
+        "id": 13,
+        "inProgress": false,
+        "kill": false,
+        "name": "Reference Boss",
+        "startTime": 1010100
+      },
+      {
+        "bossPercentage": 0.0,
+        "encounterID": 42,
+        "endTime": 1025100,
+        "fightPercentage": 0.0,
+        "id": 14,
+        "inProgress": false,
+        "kill": true,
+        "name": "Reference Boss",
+        "startTime": 1020100
+      }
+    ],
+    "masterData": {
+      "abilities": [
+        {
+          "gameID": 90,
+          "name": "Reference Bolt"
+        }
+      ],
+      "actors": [
+        {
+          "id": 1,
+          "name": "Reference Player",
+          "subType": "Mage",
+          "type": "Player"
+        }
+      ]
+    },
+    "startTime": 1000000
+  },
+  "schema_version": 1
+}
