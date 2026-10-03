@@ -3,11 +3,16 @@ from app.web_requests.warcraft_logs.client import EVENT_QUERY, REPORT_QUERY
 from app.web_requests.warcraft_logs.snapshot import WCLSnapshot
 
 
-def test_graphql_queries_have_balanced_braces():
-    assert REPORT_QUERY.count("{") == REPORT_QUERY.count("}")
-    assert EVENT_QUERY.count("{") == EVENT_QUERY.count("}")
-
-
+def test_checked_in_graphql_queries_have_balanced_braces():
+    for query in (REPORT_QUERY, EVENT_QUERY):
+        depth = 0
+        for char in query:
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                assert depth >= 0
+        assert depth == 0
 def test_classic_defaults_and_explicit_endpoint():
     from app.web_requests.warcraft_logs.client import DEFAULT_ENDPOINT
     assert "classic.warcraftlogs.com" in DEFAULT_ENDPOINT

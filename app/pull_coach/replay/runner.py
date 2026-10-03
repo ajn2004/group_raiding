@@ -2,12 +2,15 @@
 from dataclasses import dataclass, fields, is_dataclass
 from enum import Enum
 import json
+import logging
 from pathlib import Path
 import time
 from typing import Any, Protocol, Sequence
 
 from app.web_requests.warcraft_logs import WCLClient, WCLSnapshot
 from .manifest import ReplayManifest, load_manifest
+
+logger = logging.getLogger(__name__)
 
 
 class ReplaySpeed(str, Enum):
@@ -275,12 +278,17 @@ class ReplaySession:
                 tuple(p.ingestion for p in prior_encounter), tuple(self.completed), {})
             for stage in runner.stages:
                 try:
+                    logger.info("replay=%s report=%s encounter=%s fight=%s pull=%s stage=%s",
+                                m.replay_id, m.report_code, encounter, fight, sequence, stage.name)
                     stage_context = ReplayContext(context.replay_id, context.report_code,
                         context.encounter_id, context.current, context.history, context.sequence_number,
                         context.ingestion_history, context.encounter_history, context.prior_pull_results,
                         dict(outputs))
                     outputs[stage.name] = stage.run(stage_context)
                 except Exception as exc:
+                    logger.error("replay=%s report=%s encounter=%s fight=%s pull=%s stage=%s error_type=%s",
+                                 m.replay_id, m.report_code, encounter, fight, sequence,
+                                 stage.name, type(exc).__name__)
                     raise RuntimeError(f"replay {m.replay_id}, report {m.report_code}, encounter {encounter}, fight {fight}, pull {sequence}, stage {stage.name}: {exc}") from exc
             result = PullResult(m.replay_id, m.report_code, encounter, str(fight), ingestion.pull.pull_number,
                                 ingestion, outputs, assertions, sequence)
