@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "registry_version": "reference-1",
+  "definitions": [
+    {
+      "definition_version": "1",
+      "encounter": {
+        "encounter_id": "42",
+        "name": "Reference Boss"
+      },
+      "mechanic_id": "reference-bolt",
+      "name": "Reference Bolt",
+      "event_types": ["damage"],
+      "ability_ids": [90],
+      "failure_category": "avoidable_damage",
+      "avoidable": true,
+      "severity": "medium"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "registry_version": "1",
+  "definitions": [
+    {
+      "definition_version": "1",
+      "encounter": {"encounter_id": "boss-1", "name": "Example Encounter"},
+      "mechanic_id": "example-blast",
+      "name": "Example Blast",
+      "event_types": ["damage"],
+      "ability_ids": [42],
+      "failure_category": "avoidable_damage",
+      "avoidable": true,
+      "expected_roles": ["damage"],
+      "severity": "medium",
+      "weight": 1.0,
+      "timing_window": {"start_offset_ms": 100, "end_offset_ms": 500},
+      "relationships": {"pairs_with": ["defensive-cooldown"]}
+    }
+  ]
+}
