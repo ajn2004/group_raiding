@@ -32,6 +32,12 @@ _EVENT_TYPES = {"damage": EventType.DAMAGE, "heal": EventType.HEAL, "cast": Even
                 "combatantinfo": EventType.OTHER}
 
 
+def discovery_source_fingerprint(report_reference):
+    """Stable report identity used by discovery provenance and reuse checks."""
+    code = parse_report_code(report_reference)
+    return sha256(f"warcraftlogs:report:{code}".encode("utf-8")).hexdigest()
+
+
 def _actor_type(value):
     return {"player": ActorType.PLAYER, "npc": ActorType.NPC, "pet": ActorType.PET,
             "object": ActorType.OBJECT}.get(str(value or "").casefold(), ActorType.UNKNOWN)
@@ -164,7 +170,7 @@ class EncounterDiscoveryService:
                 tuple(sorted(item["sources"].items(), key=lambda pair: pair[0].value)),
                 tuple(sorted(item["targets"].items(), key=lambda pair: pair[0].value)),
                 tuple(sorted(item["fights"].items())), damage, item["first"], item["last"], item["death"]))
-        fingerprint = sha256(f"warcraftlogs:report:{code}".encode("utf-8")).hexdigest()
+        fingerprint = discovery_source_fingerprint(code)
         provenance = tuple(sorted(DiscoveryProvenance("warcraftlogs", fingerprint, str(f["id"])) for f in selected))
         artifact = EncounterDiscovery(requested_id, name, provenance,
             tuple(sorted(candidates, key=lambda c: canonical_ability_id(c.ability_id))))

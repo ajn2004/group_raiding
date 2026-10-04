@@ -1,5 +1,6 @@
 import asyncio
 import os
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -126,14 +127,17 @@ def test_picker_options_use_encounter_ids_and_summarize_catalog():
     assert "2 pulls · no kill · unsupported" == options[1].description
 
 
-def test_unsupported_selection_stays_open_and_skips_handoff():
+def test_unsupported_selection_uses_discovery_handoff_and_completes_picker():
     called = []
-    view = make_view(catalog([encounter(1, False)]), 7, lambda selection, interaction: called.append(selection))
+    view = make_view(catalog([encounter(1, False)]), 7, lambda *_: None,
+                     lambda selection, summary, interaction: called.append((selection, summary)))
     interaction = Interaction(values=["1"])
     asyncio.run(view._select(interaction))
-    assert "mechanic definitions" in interaction.sent[0][0]
-    assert not called
-    assert not view.completed
+    assert len(called) == 1
+    assert called[0][0].encounter_id == "1"
+    assert view.completed and all(child.disabled for child in view.children)
+    asyncio.run(view._select(interaction))
+    assert len(called) == 1
 
 
 def test_supported_selection_acknowledges_before_handoff_and_passes_interaction_once():
@@ -210,6 +214,92 @@ def test_default_handoff_sanitizes_expected_failure_without_public_post(monkeypa
     asyncio.run(view._select(interaction))
     assert any("doesn't have mechanic definitions" in message for message, _ in interaction.sent if isinstance(message, str))
     assert not any("Selected Boss" in message for message, _ in interaction.sent if isinstance(message, str))
+
+
+def test_discovery_is_ephemeral_off_thread_and_persists_only_selected_encounter(monkeypatch, tmp_path):
+    from app.pull_coach.mechanics.store import DirectoryMechanicsStore
+    from app.pull_coach.models import DiscoveryProvenance, EncounterDiscovery, CandidateMechanic
+    from app.pull_coach.models import EventType
+    root = tmp_path / "mechanics"
+    store = DirectoryMechanicsStore(root)
+    candidate = CandidateMechanic("ability:9", "Ability", (EventType.CAST,), (), (), (("1a", 2),), None, 1, 2, 0)
+    artifact = EncounterDiscovery("1", "Boss 1", (DiscoveryProvenance("warcraftlogs",
+        module.discovery_source_fingerprint("REPORT"), "1a"), DiscoveryProvenance("warcraftlogs",
+        module.discovery_source_fingerprint("REPORT"), "1b")), (candidate,))
+    calls = []
+    main_thread = threading.get_ident()
+    class Service:
+        def discover(self, reference, encounter_id):
+            calls.append(("discover", reference, encounter_id, threading.get_ident()))
+            store.write_discovery(artifact)
+            return artifact
+    cog = PullCoach(None, mechanics_store_factory=lambda: store, discovery_factory=lambda writer: Service())
+    view = make_view(catalog([encounter(1, False)]), 7, lambda *_: pytest.fail("analysis ran"),
+                     cog._handle_unsupported_selection)
+    interaction = Interaction(values=["1"])
+    original_edit = interaction.edit_message
+    order = []
+    async def acknowledge(**kwargs):
+        order.append("ack")
+        await original_edit(**kwargs)
+    interaction.edit_message = acknowledge
+    async def thread(fn, *args):
+        order.append("work")
+        return await asyncio.get_running_loop().run_in_executor(None, lambda: fn(*args))
+    monkeypatch.setattr(module.asyncio, "to_thread", thread)
+    asyncio.run(view._select(interaction))
+    assert order == ["ack", "work", "work"]  # artifact lookup then discovery
+    assert calls[0][1:3] == ("https://www.warcraftlogs.com/reports/REPORT", "1")
+    assert calls[0][3] != main_thread
+    assert store.read_discovery("1") == artifact
+    message, kwargs = interaction.sent[-1]
+    assert kwargs["ephemeral"] is True
+    assert "2 completed pulls" in message and "1 mechanic/ability candidates" in message
+    assert "hasn't verified Boss 1" in message and "queued for mechanic review" in message
+    assert "REPORT" not in message and "Ability" not in message
+
+
+def test_matching_artifact_reused_but_fight_set_or_report_mismatch_rediscover(tmp_path, monkeypatch):
+    from app.pull_coach.mechanics.store import DirectoryMechanicsStore
+    from app.pull_coach.models import DiscoveryProvenance, EncounterDiscovery
+    store = DirectoryMechanicsStore(tmp_path)
+    fp = module.discovery_source_fingerprint("REPORT")
+    def artifact(fights, fingerprint=fp):
+        return EncounterDiscovery("1", "Boss", tuple(DiscoveryProvenance("warcraftlogs", fingerprint, i) for i in fights), ())
+    store.write_discovery(artifact(["1a", "1b"]))
+    calls = []
+    class Service:
+        def discover(self, *_):
+            calls.append("discover")
+            value = artifact(["1a", "1b"])
+            store.write_discovery(value)
+            return value
+    cog = PullCoach(None, mechanics_store_factory=lambda: store, discovery_factory=lambda _: Service())
+    async def thread(fn, *args):
+        return fn(*args)
+    monkeypatch.setattr(module.asyncio, "to_thread", thread)
+    async def run(summary):
+        i = Interaction(values=["1"])
+        v = HistoricalEncounterPicker(catalog([summary]), 7, lambda *_: None, cog._handle_unsupported_selection)
+        await v._select(i)
+    asyncio.run(run(encounter(1, False)))
+    assert calls == []
+    changed = HistoricalEncounterSummary("1", "Boss 1", ("1a", "1c"), 2, False, "1c", None, 1, 2, False)
+    asyncio.run(run(changed))
+    assert calls == ["discover"]
+    store.write_discovery(artifact(["1a", "1b"], "0" * 64))
+    asyncio.run(run(encounter(1, False)))
+    assert calls == ["discover", "discover"]
+
+
+def test_missing_writable_root_is_sanitized_ephemerally(monkeypatch):
+    monkeypatch.delenv("PULL_COACH_MECHANICS_ROOT", raising=False)
+    cog = PullCoach(None)
+    interaction = Interaction()
+    summary = encounter(1, False)
+    asyncio.run(cog._handle_unsupported_selection(HistoricalEncounterSelection("REPORT", "https://www.warcraftlogs.com/reports/REPORT", "1"), summary, interaction))
+    assert "storage" in interaction.sent[-1][0] and interaction.sent[-1][1]["ephemeral"]
+    assert "REPORT" not in interaction.sent[-1][0]
 
 
 def test_direct_outsider_selection_cannot_reach_handoff():
