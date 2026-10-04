@@ -1,8 +1,7 @@
 import json
-from app import app
-from app.models import *
+from pathlib import Path
 
-with open('data/character-json.json', 'r') as json_file:
+with (Path(__file__).resolve().parents[2] / 'data' / 'character-json.json').open('r') as json_file:
     data = json.load(json_file)
 
 toons = []
@@ -28,4 +27,3 @@ with app.app_context():
                 print(datum['slug'] + ' was not found as a ' + datum['class'])
     db.session.bulk_save_objects(toons)
     db.session.commit()
-

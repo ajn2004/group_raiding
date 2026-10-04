@@ -1,0 +1,14 @@
+{
+  "name": "group-raiding",
+  "private": true,
+  "packageManager": "pnpm@10.12.4",
+  "scripts": {
+    "backend:sync": "cd apps/backend && uv sync",
+    "backend:test": "cd apps/backend && uv run pytest",
+    "backend:bot": "cd apps/backend && uv run python main.py",
+    "backend:alembic": "cd apps/backend && uv run alembic",
+    "web:dev": "pnpm --filter @group-raiding/web dev",
+    "web:test": "pnpm --filter @group-raiding/web test",
+    "web:build": "pnpm --filter @group-raiding/web build"
+  }
+}

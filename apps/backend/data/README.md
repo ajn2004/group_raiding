@@ -2,9 +2,9 @@
 
 Export [that's my bis](https://thatsmybis.com) information to this folder as a giant JSON blob
 
-run
+run from `apps/backend`:
 ```bash
-python convert_data.py
+uv run python scripts/legacy/convert_data.py
 ```
 
 and then you should be ready to go

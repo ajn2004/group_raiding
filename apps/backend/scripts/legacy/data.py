@@ -1,8 +1,7 @@
 import json
-from app import app
-from app.models import *
+from pathlib import Path
 
-with open('data/loot-data.json', 'r') as json_file:
+with (Path(__file__).resolve().parents[2] / 'data' / 'loot-data.json').open('r') as json_file:
     data = json.load(json_file)
 
 toon = 'TOON_NAME'

@@ -2,15 +2,49 @@
 
 Guild tooling for Presynaptic, including the deterministic Pull Coach V0.
 
+This repository is a polyglot monorepo. `apps/backend` is the Python
+server-side application and `apps/web` is the React/TypeScript presentation
+application. They will meet at the future HTTP/OpenAPI boundary.
+
+```text
+apps/backend/ Python bot, persistence, integrations, Pull Coach, migrations, tests
+apps/web/     TypeScript web workspace
+docs/         Architecture and project documentation
+```
+
+Python domain and business logic remain authoritative. Browser/UI code must not
+import Python persistence models or duplicate domain rules. Web/backend
+contracts cross the HTTP API/OpenAPI boundary.
+
 ## Install and run
 
-Install Python and [uv](https://docs.astral.sh/uv/), then:
+Install Python, [uv](https://docs.astral.sh/uv/), Node.js, and pnpm. Run Python
+commands from `apps/backend` (or use the root `pnpm backend:*` convenience
+scripts):
 
 ```bash
+cd apps/backend
 uv sync
 cp .env.example .env   # fill in only credentials needed for your workflow
 uv run python main.py
 ```
+
+Run tests with `uv run pytest` in `apps/backend`. Python imports retain the
+package name `app`; Alembic and backend-relative data/mechanics paths are rooted
+there as well.
+
+Install JavaScript workspace dependencies from the repository root with:
+
+```bash
+pnpm install
+```
+
+Once the Next.js app is introduced, use the root convenience scripts
+`pnpm web:dev`, `pnpm web:test`, and `pnpm web:build` (or run the corresponding
+script directly in `apps/web`). These are independent services: start the bot
+with `cd apps/backend && uv run python main.py` and start the web client with `pnpm web:dev` in a
+separate terminal. The web client will call the backend through its HTTP API;
+running the browser app does not implicitly start the Discord bot or API.
 
 The legacy bot uses `DISCORD_BOT_TOKEN` and the `SQLALCHEMY_DATABASE_*` values
 for database-backed features. Pull Coach's offline demo does not need Discord,
@@ -35,8 +69,9 @@ writable directory root:
 PULL_COACH_MECHANICS_ROOT=/path/to/pull-coach-mechanics
 ```
 
-Do not switch a live bot to the checked-in `mechanics/pull-coach` root until it
-contains the intended verified encounter definitions. A configured directory
+Do not switch a live bot to the checked-in `mechanics/pull-coach` root under
+`apps/backend` until it contains the intended verified encounter definitions.
+A configured directory
 root takes precedence over `PULL_COACH_MECHANICS_FILE`, so the currently empty
 checked-in registry would otherwise replace the legacy definitions with an
 empty registry.
@@ -139,6 +174,6 @@ continues through later pulls. The generic replay harness remains available as
 `uv run python -m app.pull_coach.replay MANIFEST`; the demo command composes the
 full production pipeline.
 
-Configuration variables are listed in [`.env.example`](.env.example). Replay
+Backend configuration variables are listed in [`apps/backend/.env.example`](apps/backend/.env.example). Replay
 semantics and historical corpus/privacy notes are in
-[`tests/replay/README.md`](tests/replay/README.md).
+[`apps/backend/tests/replay/README.md`](apps/backend/tests/replay/README.md).
