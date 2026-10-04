@@ -7,6 +7,16 @@
             "title": "Authenticated",
             "type": "boolean"
           },
+          "authorization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorizationResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "avatar_url": {
             "anyOf": [
               {
@@ -69,6 +79,60 @@
         "title": "AuthSessionResponse",
         "type": "object"
       },
+      "AuthorizationResponse": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "enum": [
+                "app.view",
+                "players.manage",
+                "coaching.configure",
+                "usage.view",
+                "admin.manage_rbac"
+              ],
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "community": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Community"
+          },
+          "is_member": {
+            "default": false,
+            "title": "Is Member",
+            "type": "boolean"
+          },
+          "role_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Role Ids",
+            "type": "array"
+          },
+          "status": {
+            "default": "unavailable",
+            "enum": [
+              "member",
+              "not_member",
+              "unavailable",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "AuthorizationResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -111,6 +175,57 @@
           "signed_out"
         ],
         "title": "LogoutResponse",
+        "type": "object"
+      },
+      "RbacMappingResponse": {
+        "properties": {
+          "capability": {
+            "enum": [
+              "app.view",
+              "players.manage",
+              "coaching.configure",
+              "usage.view",
+              "admin.manage_rbac"
+            ],
+            "title": "Capability",
+            "type": "string"
+          },
+          "community": {
+            "title": "Community",
+            "type": "string"
+          },
+          "guild_id": {
+            "title": "Guild Id",
+            "type": "string"
+          },
+          "role_id": {
+            "title": "Role Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "community",
+          "guild_id",
+          "role_id",
+          "capability"
+        ],
+        "title": "RbacMappingResponse",
+        "type": "object"
+      },
+      "RbacMappingsResponse": {
+        "properties": {
+          "mappings": {
+            "items": {
+              "$ref": "#/components/schemas/RbacMappingResponse"
+            },
+            "title": "Mappings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mappings"
+        ],
+        "title": "RbacMappingsResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -418,6 +533,71 @@
         ]
       }
     },
+    "/api/auth/session/refresh": {
+      "post": {
+        "operationId": "refreshAuthSession",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-csrf-token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Csrf-Token"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "group_raiding_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group Raiding Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh Session",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
     "/api/healthz": {
       "get": {
         "operationId": "getHealth",
@@ -436,6 +616,27 @@
         "summary": "Health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/rbac/mappings": {
+      "get": {
+        "operationId": "listRbacMappings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RbacMappingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Rbac Mappings",
+        "tags": [
+          "authorization"
         ]
       }
     }

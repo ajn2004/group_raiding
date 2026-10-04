@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 
 from app.api import auth
@@ -86,6 +87,7 @@ def client(monkeypatch):
     monkeypatch.setenv("DISCORD_OAUTH_CLIENT_ID", "client-id")
     monkeypatch.setenv("DISCORD_OAUTH_CLIENT_SECRET", "client-secret")
     monkeypatch.setenv("DISCORD_GUILD_ID", "guild-id")
+    monkeypatch.setenv("DISCORD_TOKEN_ENCRYPTION_KEY", Fernet.generate_key().decode())
     monkeypatch.setenv("PUBLIC_APP_URL", "http://localhost:3000")
     monkeypatch.delenv("DISCORD_OAUTH_CALLBACK_URL", raising=False)
     with TestClient(app) as test_client:
@@ -119,15 +121,39 @@ def test_callback_restores_session_and_logout_invalidates_it(client, monkeypatch
     assert "httponly" in callback.headers["set-cookie"].lower()
     assert "secure" not in callback.headers["set-cookie"].lower()
     restored = client.get("/api/auth/session")
-    assert {key: value for key, value in restored.json().items() if key != "csrf_token"} == {
+    assert {key: value for key, value in restored.json().items() if key not in {"csrf_token", "authorization"}} == {
         "authenticated": True, "discord_user_id": "42", "username": "raider", "display_name": "Raider",
         "avatar_url": "https://cdn.discordapp.com/avatars/42/hash.png",
     }
     assert len(restored.json()["csrf_token"]) >= 40
+    assert restored.json()["authorization"]["status"] == "unavailable"
     assert "never-client-side" not in restored.text
     assert client.post("/api/auth/logout", headers={"X-CSRF-Token": "wrong"}).status_code == 403
     assert client.post("/api/auth/logout", headers={"X-CSRF-Token": restored.json()["csrf_token"]}).json() == {"signed_out": True}
     assert client.get("/api/auth/session", cookies={auth.SESSION_COOKIE: cookie}).json()["authenticated"] is False
+
+
+def test_session_read_does_not_refresh_membership_or_call_discord(client, monkeypatch):
+    def discord_response(url, **_kwargs):
+        if "oauth2/token" in url:
+            return {"access_token": "token", "refresh_token": "refresh"}
+        if url.endswith("/users/@me"):
+            return {"id": "42", "username": "raider"}
+        return {"roles": ["role-1"]}
+
+    monkeypatch.setattr(auth, "_http_json", discord_response)
+    login = client.get("/api/auth/discord/login", follow_redirects=False)
+    state = parse_qs(urlparse(login.headers["location"]).query)["state"][0]
+    callback = client.get("/api/auth/discord/callback", params={"state": state, "code": "code"}, follow_redirects=False)
+    cookie = callback.cookies[auth.SESSION_COOKIE]
+    monkeypatch.setattr(auth, "_http_json", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("GET called Discord")))
+    monkeypatch.setattr(auth, "_refresh_membership", lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("GET refreshed membership")))
+
+    restored = client.get("/api/auth/session", cookies={auth.SESSION_COOKIE: cookie})
+
+    assert restored.status_code == 200
+    assert restored.json()["authorization"]["status"] == "member"
+    assert restored.json()["authorization"]["role_ids"] == ["role-1"]
 
 
 def test_repeat_login_reuses_identity_and_preserves_existing_sessions(client, monkeypatch):

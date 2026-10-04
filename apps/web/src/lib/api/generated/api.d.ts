@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/session/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Session */
+        post: operations["refreshAuthSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/healthz": {
         parameters: {
             query?: never;
@@ -89,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/rbac/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Rbac Mappings */
+        get: operations["listRbacMappings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -97,6 +131,7 @@ export interface components {
         AuthSessionResponse: {
             /** Authenticated */
             authenticated: boolean;
+            authorization?: components["schemas"]["AuthorizationResponse"] | null;
             /** Avatar Url */
             avatar_url?: string | null;
             /** Csrf Token */
@@ -107,6 +142,26 @@ export interface components {
             display_name?: string | null;
             /** Username */
             username?: string | null;
+        };
+        /** AuthorizationResponse */
+        AuthorizationResponse: {
+            /** Capabilities */
+            capabilities?: ("app.view" | "players.manage" | "coaching.configure" | "usage.view" | "admin.manage_rbac")[];
+            /** Community */
+            community?: string | null;
+            /**
+             * Is Member
+             * @default false
+             */
+            is_member: boolean;
+            /** Role Ids */
+            role_ids?: string[];
+            /**
+             * Status
+             * @default unavailable
+             * @enum {string}
+             */
+            status: "member" | "not_member" | "unavailable" | "unknown";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -124,6 +179,25 @@ export interface components {
         LogoutResponse: {
             /** Signed Out */
             signed_out: boolean;
+        };
+        /** RbacMappingResponse */
+        RbacMappingResponse: {
+            /**
+             * Capability
+             * @enum {string}
+             */
+            capability: "app.view" | "players.manage" | "coaching.configure" | "usage.view" | "admin.manage_rbac";
+            /** Community */
+            community: string;
+            /** Guild Id */
+            guild_id: string;
+            /** Role Id */
+            role_id: string;
+        };
+        /** RbacMappingsResponse */
+        RbacMappingsResponse: {
+            /** Mappings */
+            mappings: components["schemas"]["RbacMappingResponse"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -277,6 +351,39 @@ export interface operations {
             };
         };
     };
+    refreshAuthSession: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: {
+                group_raiding_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;
@@ -293,6 +400,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    listRbacMappings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RbacMappingsResponse"];
                 };
             };
         };

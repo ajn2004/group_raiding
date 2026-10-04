@@ -6,9 +6,9 @@ import json
 import logging
 import os
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request as URLRequest, urlopen
 
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse
@@ -18,6 +18,8 @@ from app.api.schemas import AuthSessionResponse, LogoutResponse
 from app.api.dependencies import get_db_session
 from app.api import auth_repository as repository
 from sqlalchemy.orm import Session
+from cryptography.fernet import Fernet, InvalidToken
+from app.api.authorization import context_for_session
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 load_dotenv()
@@ -58,9 +60,86 @@ def _http_json(url: str, *, data: dict | None = None, token: str | None = None) 
         headers["Content-Type"] = "application/x-www-form-urlencoded"
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    request = Request(url, data=payload, headers=headers)
+    request = URLRequest(url, data=payload, headers=headers)
     with urlopen(request, timeout=10) as result:
         return json.loads(result.read())
+
+
+def _fernet() -> Fernet:
+    key = os.getenv("DISCORD_TOKEN_ENCRYPTION_KEY", "")
+    if not key:
+        raise HTTPException(503, "Discord token encryption is not configured")
+    try:
+        return Fernet(key.encode())
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(503, "Discord token encryption configuration is invalid") from exc
+
+
+def _encrypt_token(value: str) -> str:
+    return _fernet().encrypt(value.encode()).decode()
+
+
+def _decrypt_token(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return _fernet().decrypt(value.encode()).decode()
+    except (InvalidToken, UnicodeDecodeError):
+        return None
+
+
+def _refresh_membership(db: Session, web_session, *, access_token: str | None = None) -> bool:
+    """Refresh current member roles; a provider failure clears all cached grants."""
+    now = repository.utc_now()
+    try:
+        token_expires_at = web_session.discord_token_expires_at
+        if token_expires_at is not None and token_expires_at.tzinfo is None:
+            token_expires_at = token_expires_at.replace(tzinfo=timezone.utc)
+        if access_token is None and token_expires_at and token_expires_at <= now:
+            refresh_token = _decrypt_token(web_session.discord_refresh_token_ciphertext)
+            if not refresh_token:
+                raise RuntimeError("Discord refresh credential unavailable")
+            client_id, client_secret, _, _, _ = _settings()
+            payload = _http_json("https://discord.com/api/oauth2/token", data={
+                "client_id": client_id, "client_secret": client_secret,
+                "grant_type": "refresh_token", "refresh_token": refresh_token,
+            })
+            access_token = payload["access_token"]
+            web_session.discord_refresh_token_ciphertext = _encrypt_token(payload.get("refresh_token", refresh_token))
+            web_session.discord_access_token_ciphertext = _encrypt_token(access_token)
+            web_session.discord_token_expires_at = now + timedelta(seconds=int(payload.get("expires_in", 3600)))
+        token = access_token or _decrypt_token(web_session.discord_access_token_ciphertext)
+        if not token:
+            raise RuntimeError("Discord access credential unavailable")
+        payload = _http_json(f"https://discord.com/api/users/@me/guilds/{web_session.community_guild_id}/member", token=token)
+        roles = payload.get("roles")
+        if not isinstance(roles, list) or not all(isinstance(role, (str, int)) for role in roles):
+            raise ValueError("Malformed Discord guild member response")
+        web_session.membership_status = "member"
+        web_session.member_role_ids = sorted({str(role) for role in roles})
+        web_session.membership_refreshed_at = now
+        return True
+    except (OSError, TimeoutError, ValueError, KeyError, RuntimeError, TypeError, HTTPException) as exc:
+        # Network/client errors and malformed provider payloads fail closed;
+        # callback diagnostics omit raw response bodies and credentials.
+        _log_callback_failure("guild_membership_refresh", exc)
+        from urllib.error import HTTPError
+        if isinstance(exc, HTTPError) and exc.code == 404:
+            web_session.membership_status = "not_member"
+            web_session.member_role_ids = []
+            web_session.membership_refreshed_at = now
+            return True
+        web_session.membership_status = "unavailable"
+        web_session.member_role_ids = []
+        web_session.membership_refreshed_at = now
+        return False
+
+
+def _auth_context(db: Session, web_session, identity) -> dict:
+    context = context_for_session(db, web_session, identity)
+    return {"community": context.community_id, "is_member": context.is_member,
+            "role_ids": list(context.role_ids), "capabilities": list(context.capabilities),
+            "status": web_session.membership_status}
 
 
 def _log_callback_failure(stage: str, exc: Exception) -> None:
@@ -128,7 +207,29 @@ def session(session_cookie: str | None = Cookie(None, alias=SESSION_COOKIE), db:
     stored, identity = row
     return AuthSessionResponse(authenticated=True, discord_user_id=identity.discord_user_id,
                                username=identity.username, display_name=identity.display_name,
-                               avatar_url=identity.avatar_url, csrf_token=stored.csrf_token)
+                               avatar_url=identity.avatar_url, csrf_token=stored.csrf_token,
+                               authorization=_auth_context(db, stored, identity))
+
+
+@router.post("/session/refresh", response_model=AuthSessionResponse, operation_id="refreshAuthSession")
+def refresh_session(session_cookie: str | None = Cookie(None, alias=SESSION_COOKIE),
+                    x_csrf_token: str | None = Header(None),
+                    db: Session = Depends(get_db_session)) -> AuthSessionResponse:
+    if not session_cookie:
+        raise HTTPException(401, "Session required")
+    row = repository.find_session(db, _hash(session_cookie), repository.utc_now())
+    if not row:
+        raise HTTPException(401, "Session expired")
+    stored, identity = row
+    if not x_csrf_token or not secrets.compare_digest(stored.csrf_token, x_csrf_token):
+        raise HTTPException(403, "Invalid CSRF token")
+    if not _refresh_membership(db, stored):
+        db.commit()
+        raise HTTPException(503, "Discord membership is temporarily unavailable")
+    db.commit()
+    return AuthSessionResponse(authenticated=True, discord_user_id=identity.discord_user_id,
+        username=identity.username, display_name=identity.display_name, avatar_url=identity.avatar_url,
+        csrf_token=stored.csrf_token, authorization=_auth_context(db, stored, identity))
 
 
 @router.get("/discord/login", status_code=302, operation_id="loginWithDiscord")
@@ -197,9 +298,12 @@ def discord_callback(code: str | None = None, state: str | None = None,
         return redirect
     # Resolve membership when available, but never turn it into an authz decision.
     try:
-        _http_json(f"https://discord.com/api/users/@me/guilds/{guild_id}/member", token=access_token)
+        member_payload = _http_json(f"https://discord.com/api/users/@me/guilds/{guild_id}/member", token=access_token)
     except Exception as exc:
-        _log_callback_failure("guild_membership_lookup", exc)
+        from urllib.error import HTTPError
+        member_payload = {"_not_member": True} if isinstance(exc, HTTPError) and exc.code == 404 else None
+        if member_payload is None:
+            _log_callback_failure("guild_membership_lookup", exc)
     avatar = user.get("avatar")
     identity = {"discord_user_id": str(user["id"]), "username": user.get("username", ""),
                 "display_name": user.get("global_name") or user.get("username", ""),
@@ -208,8 +312,19 @@ def discord_callback(code: str | None = None, state: str | None = None,
     try:
         web_identity = repository.upsert_identity(db, identity["discord_user_id"], identity["username"],
                                                   identity["display_name"], identity["avatar_url"])
-        repository.create_session(db, web_identity, _hash(raw_session), csrf,
-                                  repository.utc_now() + timedelta(seconds=SESSION_TTL))
+        repository.ensure_community(db, guild_id)
+        expiry = repository.utc_now() + timedelta(seconds=SESSION_TTL)
+        web_session = repository.create_session(db, web_identity, _hash(raw_session), csrf, expiry,
+            discord_access_token_ciphertext=_encrypt_token(access_token),
+            discord_refresh_token_ciphertext=_encrypt_token(token_payload["refresh_token"]) if token_payload.get("refresh_token") else None,
+            discord_token_expires_at=repository.utc_now() + timedelta(seconds=int(token_payload.get("expires_in", 3600))),
+            community_guild_id=guild_id,
+            membership_status="not_member" if isinstance(member_payload, dict) and member_payload.get("_not_member") else
+                "member" if isinstance(member_payload, dict) and isinstance(member_payload.get("roles"), list)
+                and all(isinstance(role, (int, str)) for role in member_payload.get("roles", [])) else "unavailable",
+            member_role_ids=sorted({str(role) for role in member_payload.get("roles", [])})
+                if isinstance(member_payload, dict) and isinstance(member_payload.get("roles"), list)
+                and all(isinstance(role, (int, str)) for role in member_payload.get("roles", [])) else [])
         db.commit()
     except Exception as exc:
         db.rollback()

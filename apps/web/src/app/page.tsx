@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { HealthStatus } from "@/components/health-status";
 import styles from "./page.module.css";
+import type { AuthorizationContext } from "@/lib/auth/capabilities";
 
-type Session = { authenticated: boolean; discord_user_id?: string | null; username?: string | null; display_name?: string | null; avatar_url?: string | null; csrf_token?: string | null };
+type Session = { authenticated: boolean; discord_user_id?: string | null; username?: string | null; display_name?: string | null; avatar_url?: string | null; csrf_token?: string | null; authorization?: AuthorizationContext | null };
 type AuthState = { status: "loading" } | { status: "anonymous" } | { status: "authenticated"; session: Session } | { status: "error"; message: string };
 
 export default function Home() {

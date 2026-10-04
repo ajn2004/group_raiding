@@ -1,7 +1,7 @@
 """Persistence models for browser authentication (not legacy Player links)."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -27,6 +27,13 @@ class WebSession(Base):
     csrf_token: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    discord_access_token_ciphertext: Mapped[str | None] = mapped_column(String(4096))
+    discord_refresh_token_ciphertext: Mapped[str | None] = mapped_column(String(4096))
+    discord_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    community_guild_id: Mapped[str | None] = mapped_column(String(100))
+    membership_status: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
+    member_role_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    membership_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     identity: Mapped[WebIdentity] = relationship(back_populates="sessions")
 
 
@@ -41,3 +48,22 @@ class OAuthState(Base):
 
 Index("ix_web_sessions_expires_at", WebSession.expires_at)
 Index("ix_oauth_states_expires_at", OAuthState.expires_at)
+
+
+class DiscordCommunity(Base):
+    __tablename__ = "discord_communities"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    discord_guild_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class DiscordRoleCapability(Base):
+    __tablename__ = "discord_role_capabilities"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    community_id: Mapped[int] = mapped_column(ForeignKey("discord_communities.id", ondelete="CASCADE"), nullable=False)
+    discord_role_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    capability: Mapped[str] = mapped_column(String(100), nullable=False)
+    community: Mapped[DiscordCommunity] = relationship()
+    __table_args__ = (UniqueConstraint("community_id", "discord_role_id", "capability",
+                                       name="uq_discord_role_capability"),)
