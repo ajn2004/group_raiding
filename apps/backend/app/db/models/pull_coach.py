@@ -41,6 +41,53 @@ class CoachingProfileRevision(Base):
     profile: Mapped[CoachingProfile] = relationship(back_populates="revisions", foreign_keys=[profile_purpose])
 
 
+class CoachingSession(Base):
+    """Durable provenance record for one coaching run and its conversation."""
+    __tablename__ = "coaching_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    snapshot_id: Mapped[int] = mapped_column(ForeignKey("wipefest_fight_snapshots.id"), nullable=False)
+    report_code: Mapped[str] = mapped_column(String(255), nullable=False)
+    fight_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    encounter_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    audience: Mapped[str] = mapped_column(String(20), nullable=False)
+    target_player_id: Mapped[str | None] = mapped_column(String(255))
+    target_player_name: Mapped[str | None] = mapped_column(String(255))
+    context_schema_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    context_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_context: Mapped[dict] = mapped_column(JSON, nullable=False)
+    profile_revision_id: Mapped[int] = mapped_column(ForeignKey("coaching_profile_revisions.id"), nullable=False)
+    provider: Mapped[str] = mapped_column(String(100), nullable=False)
+    requested_model: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_request_id: Mapped[str | None] = mapped_column(String(255))
+    provider_response_id: Mapped[str | None] = mapped_column(String(255))
+    actual_model: Mapped[str | None] = mapped_column(String(255))
+    usage: Mapped[dict | None] = mapped_column(JSON)
+    cost: Mapped[dict | None] = mapped_column(JSON)
+    structured_response: Mapped[dict | None] = mapped_column(JSON)
+    raw_response: Mapped[dict | str | None] = mapped_column(JSON)
+    error: Mapped[dict | None] = mapped_column(JSON)
+    messages: Mapped[list["CoachingSessionMessage"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan", order_by="CoachingSessionMessage.sequence")
+
+
+class CoachingSessionMessage(Base):
+    __tablename__ = "coaching_session_messages"
+    __table_args__ = (UniqueConstraint("session_id", "sequence", name="uq_coaching_session_message_sequence"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("coaching_sessions.id", ondelete="CASCADE"), nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(String, nullable=False)
+    message_metadata: Mapped[dict | None] = mapped_column("metadata", JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    session: Mapped[CoachingSession] = relationship(back_populates="messages")
+
+
 class PullCoachReport(Base):
     __tablename__ = "pull_coach_reports"
     __table_args__ = (UniqueConstraint("scope", "provider", "report_code", name="uq_pc_report_scope_provider_code"),)
