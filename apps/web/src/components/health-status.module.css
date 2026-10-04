@@ -1,0 +1,33 @@
+.health {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.loading { background: var(--muted); }
+.connected { background: var(--connected); }
+.error { background: var(--disconnected); }
+
+.retry {
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.retry:hover { color: var(--foreground); }
+.retry:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
