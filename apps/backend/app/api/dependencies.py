@@ -13,13 +13,7 @@ def get_db_session() -> Generator["SQLAlchemySession", None, None]:
     Import lazily so transport-only operations (including health and OpenAPI)
     don't require database configuration or establish a database connection.
     """
-    from app.db.database import Session
+    from app.db.database import session_scope
 
-    session = Session()
-    try:
+    with session_scope() as session:
         yield session
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()

@@ -18,7 +18,7 @@ fileConfig(config.config_file_name)
 # target_metdata = None
 import app.db.models  # noqa
 from app.db.models import Base  # noqa
-from app.config import USERNAME, PASSWORD, DB_SERVER, DB_NAME
+from app.config import database_url
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py.
@@ -32,8 +32,7 @@ def get_url():
     configured_url = config.get_main_option("sqlalchemy.url")
     if configured_url and not configured_url.startswith("driver://"):
         return configured_url
-    return f"postgresql://{USERNAME}:{PASSWORD}@{DB_SERVER}/{DB_NAME}"
-    # return f"sqlite:///sqlite.db"
+    return database_url().render_as_string(hide_password=False)
 
 
 context_extra_options = {}
