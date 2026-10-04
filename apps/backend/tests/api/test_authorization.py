@@ -34,6 +34,7 @@ def test_privileged_endpoint_requires_capability(monkeypatch):
     try:
         with TestClient(app) as client:
             assert client.get("/api/rbac/mappings").status_code == 401
+            assert client.put("/api/players/characters/1/link", json={"player_id": 1}).status_code == 401
             login = client.get("/api/auth/discord/login", follow_redirects=False)
             state = parse_qs(urlparse(login.headers["location"]).query)["state"][0]
             callback = client.get("/api/auth/discord/callback", params={"state": state, "code": "code"}, follow_redirects=False)
@@ -43,6 +44,8 @@ def test_privileged_endpoint_requires_capability(monkeypatch):
             assert initial_authz["role_ids"] == ["role-ordinary"]
             assert initial_authz["capabilities"] == []
             assert client.get("/api/rbac/mappings", cookies={auth.SESSION_COOKIE: cookie}).status_code == 403
+            assert client.put("/api/players/characters/1/link", json={"player_id": 1},
+                              cookies={auth.SESSION_COOKIE: cookie}).status_code == 403
             with factory() as db:
                 community = db.query(DiscordCommunity).filter_by(discord_guild_id="guild-id").one()
                 db.add(DiscordRoleCapability(community_id=community.id, discord_role_id="role-ordinary",

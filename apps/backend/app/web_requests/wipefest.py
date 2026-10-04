@@ -115,6 +115,8 @@ class WipefestSnapshotRepository:
             WipefestFightSnapshot.fingerprint == snapshot.fingerprint,
         ))
         if row is not None:
+            from app.players.linkage import observe_snapshot
+            observe_snapshot(self.session, row)
             return row
         row = WipefestFightSnapshot(provider="wipefest", report_code=snapshot.report_code,
             fight_id=snapshot.fight_id, group_id=snapshot.group_id,
@@ -124,4 +126,6 @@ class WipefestSnapshotRepository:
             response_etag=snapshot.response_etag)
         self.session.add(row)
         self.session.flush()
+        from app.players.linkage import observe_snapshot
+        observe_snapshot(self.session, row)
         return row

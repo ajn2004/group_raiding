@@ -133,6 +133,127 @@
         "title": "AuthorizationResponse",
         "type": "object"
       },
+      "CharacterLink": {
+        "properties": {
+          "class_name": {
+            "title": "Class Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class_name"
+        ],
+        "title": "CharacterLink",
+        "type": "object"
+      },
+      "CharacterLinkRequest": {
+        "properties": {
+          "player_id": {
+            "title": "Player Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "player_id"
+        ],
+        "title": "CharacterLinkRequest",
+        "type": "object"
+      },
+      "CharacterMutationResponse": {
+        "properties": {
+          "character": {
+            "$ref": "#/components/schemas/CharacterLink"
+          },
+          "player_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Id"
+          }
+        },
+        "required": [
+          "character",
+          "player_id"
+        ],
+        "title": "CharacterMutationResponse",
+        "type": "object"
+      },
+      "CharacterSource": {
+        "properties": {
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "fight_id": {
+            "title": "Fight Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "report_code": {
+            "title": "Report Code",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider",
+          "report_code",
+          "fight_id",
+          "snapshot_id"
+        ],
+        "title": "CharacterSource",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -175,6 +296,122 @@
           "signed_out"
         ],
         "title": "LogoutResponse",
+        "type": "object"
+      },
+      "ManagedPlayer": {
+        "properties": {
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/CharacterLink"
+            },
+            "title": "Characters",
+            "type": "array"
+          },
+          "discord_id": {
+            "title": "Discord Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "discord_id",
+          "characters"
+        ],
+        "title": "ManagedPlayer",
+        "type": "object"
+      },
+      "ObservedCharacter": {
+        "properties": {
+          "ambiguous": {
+            "default": false,
+            "title": "Ambiguous",
+            "type": "boolean"
+          },
+          "class_name": {
+            "title": "Class Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "linked_player_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linked Player Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CharacterSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "class_name",
+          "sources"
+        ],
+        "title": "ObservedCharacter",
+        "type": "object"
+      },
+      "ObservedCharactersResponse": {
+        "properties": {
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedCharacter"
+            },
+            "title": "Characters",
+            "type": "array"
+          }
+        },
+        "required": [
+          "characters"
+        ],
+        "title": "ObservedCharactersResponse",
         "type": "object"
       },
       "OpenRouterModelResponse": {
@@ -355,6 +592,22 @@
           "price_unit"
         ],
         "title": "OpenRouterPricingResponse",
+        "type": "object"
+      },
+      "PlayersResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/ManagedPlayer"
+            },
+            "title": "Players",
+            "type": "array"
+          }
+        },
+        "required": [
+          "players"
+        ],
+        "title": "PlayersResponse",
         "type": "object"
       },
       "RbacMappingResponse": {
@@ -817,6 +1070,169 @@
         "summary": "Health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/players": {
+      "get": {
+        "operationId": "listPlayers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayersResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Players",
+        "tags": [
+          "players"
+        ]
+      }
+    },
+    "/api/players/characters/{character_id}/link": {
+      "delete": {
+        "operationId": "unlinkCharacter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "character_id",
+            "required": true,
+            "schema": {
+              "title": "Character Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Character Link",
+        "tags": [
+          "players"
+        ]
+      },
+      "put": {
+        "operationId": "linkCharacter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "character_id",
+            "required": true,
+            "schema": {
+              "title": "Character Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CharacterLinkRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Character Link",
+        "tags": [
+          "players"
+        ]
+      }
+    },
+    "/api/players/observed-characters": {
+      "get": {
+        "operationId": "listObservedCharacters",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedCharactersResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Observed Characters",
+        "tags": [
+          "players"
         ]
       }
     },

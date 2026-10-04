@@ -22,4 +22,5 @@ from .pull_coach import (
     PullCoachReport,
 )
 from .wipefest import WipefestFightSnapshot
+from .character_observation import CharacterObservation
 from .web_auth import WebIdentity, WebSession, OAuthState, DiscordCommunity, DiscordRoleCapability

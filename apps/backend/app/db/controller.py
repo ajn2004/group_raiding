@@ -4,6 +4,8 @@ from sqlalchemy import desc
 from discord.ext.commands import Context
 from app.db.database import session_scope
 from app.db.models import Player, Usage, Character
+from app.players.linkage import LinkageConflict, link_character
+from sqlalchemy import select
 from datetime import datetime
 
 class DBController:
@@ -103,14 +105,21 @@ class DBController:
     def add_alt(self, alt_object ={}) -> str:
         with session_scope() as session:
             if player := session.query(Player).filter(Player.id == alt_object['player_id']).first():
-                if character := session.query(Character).filter(Character.name == alt_object['name']).first():
-                    return f"The character {character.name} already exists"
-                else:
-                    session.add(Character(name = alt_object['name'],
-                                          class_name = alt_object['class'],
-                                          player_id = alt_object['player_id']
-                                ))
+                candidates = list(session.scalars(select(Character).where(
+                    Character.name.ilike(alt_object['name'])).order_by(Character.id)))
+                if candidates:
+                    if len(candidates) != 1:
+                        return f"The character {alt_object['name']} is ambiguous; ask an officer to resolve it"
+                    character = candidates[0]
+                    try:
+                        link_character(session, character.id, player.id)
+                    except LinkageConflict:
+                        return f"The character {character.name} is linked to another player; ask an officer to resolve it"
                     session.commit()
-                    return f"Added {alt_object['name']} to the database"
+                    return f"Added {character.name} to the database"
+                session.add(Character(name=alt_object['name'], class_name=alt_object['class'],
+                                      player_id=player.id))
+                session.commit()
+                return f"Added {alt_object['name']} to the database"
             else:
                 return "Player not found"
