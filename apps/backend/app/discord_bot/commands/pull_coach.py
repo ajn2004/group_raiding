@@ -68,6 +68,12 @@ class HistoricalEncounterSelection:
     encounter_id: str
 
 
+@dataclass(frozen=True)
+class FightSelection:
+    fight_id: str
+    encounter_name: str
+
+
 def _friendly_error(exc):
     if isinstance(exc, NoCatalogEncounters):
         return "That report has no completed boss pulls to browse."
@@ -247,6 +253,93 @@ class HistoricalEncounterPicker(discord.ui.View):
         await self._edit_picker(content="Encounter browser expired.")
 
 
+class FightPicker(discord.ui.View):
+    """Owner-scoped paginated selector for completed WCL report fights."""
+    PAGE_SIZE = 25
+
+    def __init__(self, fights, owner_id: int, on_selection):
+        super().__init__(timeout=300)
+        self.fights, self.owner_id, self.on_selection = tuple(fights), owner_id, on_selection
+        self.page = 0
+        self.completed = False
+        self.expired = False
+        self.message = None
+        self._render()
+
+    @property
+    def page_count(self):
+        return max(1, (len(self.fights) + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
+
+    def _render(self):
+        self.clear_items()
+        page_fights = self.fights[self.page * self.PAGE_SIZE:(self.page + 1) * self.PAGE_SIZE]
+        options = []
+        for fight in page_fights:
+            label = f"Fight {fight.fight_id} · {fight.encounter_name}"[:100]
+            result = "Kill" if fight.is_kill else "Wipe"
+            percent = f" · {fight.boss_percentage:.1f}% remaining" if fight.boss_percentage is not None and not fight.is_kill else ""
+            options.append(discord.SelectOption(label=label, value=fight.fight_id,
+                                                description=f"{result}{percent}"[:100]))
+        selector = discord.ui.Select(placeholder=f"Choose a fight · page {self.page + 1}/{self.page_count}",
+                                     options=options, min_values=1, max_values=1)
+        selector.callback = self._select
+        self.add_item(selector)
+        previous = discord.ui.Button(label="Previous", style=discord.ButtonStyle.secondary, disabled=self.page == 0)
+        previous.callback = self._previous
+        following = discord.ui.Button(label="Next", style=discord.ButtonStyle.secondary,
+                                      disabled=self.page >= self.page_count - 1)
+        following.callback = self._next
+        self.add_item(previous)
+        self.add_item(following)
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("This fight browser belongs to another user.", ephemeral=True)
+            return False
+        if self.completed or self.expired:
+            await interaction.response.send_message("This fight browser has expired.", ephemeral=True)
+            return False
+        return True
+
+    async def _move(self, interaction, delta):
+        self.page = max(0, min(self.page_count - 1, self.page + delta))
+        self._render()
+        await interaction.response.edit_message(view=self)
+
+    async def _previous(self, interaction):
+        await self._move(interaction, -1)
+
+    async def _next(self, interaction):
+        await self._move(interaction, 1)
+
+    async def _select(self, interaction):
+        if not await self.interaction_check(interaction):
+            return
+        fight_id = interaction.data["values"][0]
+        fight = next((fight for fight in self.fights if fight.fight_id == fight_id), None)
+        if fight is None:
+            await interaction.response.send_message("That fight is no longer available.", ephemeral=True)
+            return
+        self.completed = True
+        self.stop()
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(view=self)
+        result = self.on_selection(FightSelection(fight.fight_id, fight.encounter_name), interaction)
+        if inspect.isawaitable(result):
+            await result
+
+    async def on_timeout(self):
+        self.expired = True
+        for item in self.children:
+            item.disabled = True
+        try:
+            if self.message is not None:
+                await self.message.edit(content="Fight browser expired.", view=self)
+        except (discord.HTTPException, discord.NotFound):
+            pass
+
+
 class PullCoach(commands.Cog):
     def __init__(self, bot, workflow_factory=None, presenter=None, catalog_factory=None, selection_handler=None,
                  discovery_factory=None, mechanics_store_factory=None):
@@ -258,6 +351,32 @@ class PullCoach(commands.Cog):
         self.discovery_factory = discovery_factory or (
             lambda writer: EncounterDiscoveryService(WCLClient(), writer))
         self.mechanics_store_factory = mechanics_store_factory or self._configured_discovery_store
+
+    async def _browse_fights(self, ctx, report, *, character=None):
+        service = self.workflow_factory()
+        listing = getattr(service, "list_completed_fights", None)
+        if listing is None:
+            raise CoachingSourceError("completed fight browsing is not configured")
+        fights = await asyncio.to_thread(listing, report)
+        if not fights:
+            raise NoCompletedPulls("report has no completed boss encounter fights")
+        async def selected(selection, interaction):
+            try:
+                if character is None:
+                    result = await asyncio.to_thread(service.run, report, selection.fight_id)
+                else:
+                    result = await asyncio.to_thread(service.run_player, report, selection.fight_id, character)
+                result = getattr(result, "legacy_result", None) or result
+                if character is not None:
+                    result.coaching["_character"] = character
+                payload = self.presenter.present(result)
+                await interaction.followup.send(embed=to_discord_embed(payload),
+                    view=PullCoachDetailsView(payload.details), ephemeral=character is not None)
+            except Exception as exc:
+                await interaction.followup.send(_friendly_error(exc), ephemeral=True)
+        view = FightPicker(fights, ctx.author.id, selected)
+        message = await ctx.followup.send("Choose a completed boss fight:", view=view, wait=True, ephemeral=True)
+        view.message = message
 
     @staticmethod
     def _configured_discovery_store():
@@ -319,13 +438,16 @@ class PullCoach(commands.Cog):
     @discord.slash_command(name="pullcoach", description="Analyze a Warcraft Logs boss pull")
     async def pullcoach(self, ctx: discord.ApplicationContext,
                         report: discord.Option(str, "Warcraft Logs report URL or code"),
-                        fight: discord.Option(str, "latest or Warcraft Logs fight ID", default="latest")):
+                        fight: discord.Option(str, "latest, browse, or Warcraft Logs fight ID", default="latest")):
         await ctx.defer()
         code = "unknown"
         try:
             # Log report and requested selector without exception text, which may contain sensitive data.
             from app.web_requests.warcraft_logs import parse_report_code
             code = parse_report_code(report)
+            if str(fight).strip().lower() == "browse":
+                await self._browse_fights(ctx, report)
+                return
             workflow = self.workflow_factory()
             result = await asyncio.to_thread(workflow.run, report, fight)
             result = getattr(result, "legacy_result", None) or result
@@ -340,10 +462,13 @@ class PullCoach(commands.Cog):
     @discord.slash_command(name="how-did-i-do", description="Get private coaching for a character in a fight")
     async def how_did_i_do(self, ctx: discord.ApplicationContext,
                            report: discord.Option(str, "Warcraft Logs report URL or code"),
-                           fight: discord.Option(str, "latest or Warcraft Logs fight ID", default="latest"),
-                           character: discord.Option(str, "Wipefest character name or player ID")):
+                           character: discord.Option(str, "Wipefest character name or player ID"),
+                           fight: discord.Option(str, "latest, browse, or Warcraft Logs fight ID", default="latest")):
         await ctx.defer(ephemeral=True)
         try:
+            if str(fight).strip().lower() == "browse":
+                await self._browse_fights(ctx, report, character=character)
+                return
             service = self.workflow_factory()
             run_player = getattr(service, "run_player", None)
             if run_player is None:
