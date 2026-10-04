@@ -33,6 +33,25 @@ Run tests with `uv run pytest` in `apps/backend`. Python imports retain the
 package name `app`; Alembic and backend-relative data/mechanics paths are rooted
 there as well.
 
+### Create and migrate a new PostgreSQL database
+
+Create an empty PostgreSQL database, configure its connection in
+`apps/backend/.env` (`SQLALCHEMY_DATABASE_USER`, `SQLALCHEMY_DATABASE_PASSWORD`,
+`SQLALCHEMY_DATABASE_HOST`, `SQLALCHEMY_DATABASE_PORT`, and
+`SQLALCHEMY_DATABASE_DB`), then run:
+
+```bash
+cd apps/backend
+uv run alembic upgrade head
+```
+
+The Alembic history bootstraps the legacy application schema and all current
+feature tables; no schema pre-seeding or `create_all()` step is needed.
+
+The fresh-PostgreSQL migration acceptance test is opt-in. Set
+`TEST_POSTGRES_ADMIN_URL` to a PostgreSQL URL for a user permitted to create and
+drop databases, then run `uv run pytest tests/test_fresh_postgres_bootstrap.py`.
+
 Install JavaScript workspace dependencies from the repository root with:
 
 ```bash
