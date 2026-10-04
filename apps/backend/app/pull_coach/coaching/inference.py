@@ -109,6 +109,16 @@ OUTPUT_SCHEMAS = {
 }
 
 
+def build_coaching_messages(context: dict[str, Any], profile_revision: Any) -> list[dict[str, str]]:
+    """Construct the exact prompt messages sent to the inference provider."""
+    serialized = json.dumps(context, sort_keys=True, ensure_ascii=False, allow_nan=False)
+    return [
+        {"role": "system", "content": profile_revision.system_prompt},
+        {"role": "user", "content": profile_revision.user_prompt_template +
+         "\n\nCoaching context:\n" + serialized},
+    ]
+
+
 def validate_coaching_response(value: Any, context: dict[str, Any], max_recommendations: int) -> dict[str, Any]:
     if not isinstance(value, dict) or set(value) - {"recommendations", "candidate_source_insight_keys"}:
         raise InvalidCoachingResponse("response must be a coaching object")
@@ -166,11 +176,7 @@ class OpenRouterInferenceProvider:
         if schema is None:
             raise UnsupportedOutputSchema("profile revision output schema is not supported")
         model = profile_revision.model_slug
-        serialized = json.dumps(context, sort_keys=True, ensure_ascii=False, allow_nan=False)
-        user_prompt = profile_revision.user_prompt_template + "\n\nCoaching context:\n" + serialized
-        body: dict[str, Any] = {"model": model, "messages": [
-            {"role": "system", "content": profile_revision.system_prompt},
-            {"role": "user", "content": user_prompt}]}
+        body: dict[str, Any] = {"model": model, "messages": build_coaching_messages(context, profile_revision)}
         if profile_revision.temperature is not None:
             body["temperature"] = profile_revision.temperature
         if profile_revision.max_output_tokens is not None:
