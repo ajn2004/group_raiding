@@ -100,7 +100,7 @@ def test_stopped_selector_requires_metadata_field_and_matches_normalized_event(t
         service.promote("1", "1:42", data(failure_category="interrupt", selector_interpretation="stopped_ability",
             stopped_ability_id=12345))
     service.promote("1", "1:42", data(failure_category="interrupt", selector_interpretation="stopped_ability",
-        stopped_ability_id=12345, stopped_ability_metadata_field="stopped_ability_id"))
+        stopped_ability_id="12345", stopped_ability_metadata_field="stopped_ability_id"))
     registry = store.load_verified_registry()
     matches = registry.match(EncounterIdentity("1", "Boss"), NormalizedEvent(
         100, EventType.INTERRUPT, "interrupt-evidence", metadata={"stopped_ability_id": 12345}))

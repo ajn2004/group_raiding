@@ -201,6 +201,32 @@ def test_reordered_equivalent_selectors_are_ambiguous(selector_key):
         definitions_from_dict(payload)
 
 
+@pytest.mark.parametrize(("selector_key", "event_type", "first", "second"), [
+    ("ability_ids", "damage", [12345], ["12345"]),
+    ("ability_ids", "damage", [12345], ["012345"]),
+    ("stopped_ability_ids", "interrupt", [12345], ["12345"]),
+    ("stopped_ability_ids", "interrupt", [12345], ["012345"]),
+])
+def test_numeric_selector_representations_are_ambiguous(selector_key, event_type, first, second):
+    definitions = []
+    for mechanic_id, selectors in (("first", first), ("second", second)):
+        definition = {
+            "encounter": {"encounter_id": "42", "name": "Boss"},
+            "mechanic_id": mechanic_id, "name": mechanic_id.title(), "event_types": [event_type],
+            "failure_category": "interrupt" if event_type == "interrupt" else "avoidable_damage",
+        }
+        if selector_key == "ability_ids":
+            definition["ability_ids"] = selectors
+        else:
+            definition.update(stopped_ability_ids=selectors,
+                              stopped_ability_metadata_field="stopped_ability_id")
+        definitions.append(definition)
+    from app.pull_coach.mechanics.loader import definitions_from_dict
+
+    with pytest.raises(MechanicSchemaError, match="ambiguous duplicate"):
+        definitions_from_dict({"schema_version": 1, "definitions": definitions})
+
+
 def test_rule_metadata_preserves_timing_and_relationships():
     definition = load_mechanic_definitions(DEFINITIONS / "example.json")[0]
     assert definition.definition_version == "1"
