@@ -1,5 +1,6 @@
 """Live report workflow, independent of Discord and presentation."""
 from dataclasses import dataclass
+import re
 from urllib.parse import urlparse
 
 from app.web_requests.warcraft_logs import WCLClient, parse_report_code
@@ -36,11 +37,12 @@ SUPPORTED_WCL_HOSTS = {"warcraftlogs.com", "www.warcraftlogs.com", "classic.warc
                        "vanilla.warcraftlogs.com", "sod.warcraftlogs.com"}
 
 
-def source_report_url(reference: str, report_code: str, fight_id: str) -> str:
+def source_report_url(reference: str, report_code: str, fight_id: str | None = None) -> str:
     """Build the canonical credential-free WCL link shared by live and replay."""
     parsed = urlparse(reference) if isinstance(reference, str) else None
     host = parsed.hostname if parsed and parsed.hostname in SUPPORTED_WCL_HOSTS else DEFAULT_WCL_HOST
-    return f"https://{host}/reports/{report_code}?fight={fight_id}"
+    suffix = f"?fight={fight_id}" if fight_id is not None else ""
+    return f"https://{host}/reports/{report_code}{suffix}"
 
 
 class PullCoachWorkflow:
@@ -73,8 +75,8 @@ class PullCoachWorkflow:
             if target.get("inProgress") or target.get("endTime") is None:
                 raise FightNotCompleted(f"fight {selector} is still in progress")
 
-        encounter_id = str(target["encounterID"])
-        prefix = sorted((f for f in fights if str(f.get("encounterID")) == encounter_id
+        encounter_id = normalize_encounter_id(target.get("encounterID"))
+        prefix = sorted((f for f in fights if normalize_encounter_id(f.get("encounterID")) == encounter_id
                          and _is_boss(f) and not f.get("inProgress") and f.get("endTime") is not None
                          and f["startTime"] <= target["startTime"]),
                         key=lambda f: (f["startTime"], int(f["id"])))
@@ -100,14 +102,31 @@ class PullCoachWorkflow:
                                      selected, target_ingestion, analyses[-1], progression, coaching)
 
 
-def _is_boss(fight):
-    value = fight.get("encounterID")
-    try:
-        return value is not None and int(value) > 0
-    except (TypeError, ValueError):
-        return False
+def normalize_encounter_id(value):
+    """Return a canonical positive encounter ID, or None for malformed IDs."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        number = value
+    elif isinstance(value, str) and re.fullmatch(r"[0-9]+", value):
+        number = int(value)
+    else:
+        return None
+    return str(number) if number > 0 else None
 
 
-def _encounter(fight):
+def is_boss_fight(fight):
+    return isinstance(fight, dict) and normalize_encounter_id(fight.get("encounterID")) is not None
+
+
+def encounter_identity(fight):
     from app.pull_coach.models import EncounterIdentity
-    return EncounterIdentity(str(fight["encounterID"]), fight.get("name") or "Unknown encounter")
+    encounter_id = normalize_encounter_id(fight.get("encounterID"))
+    if encounter_id is None:
+        raise ValueError("fight has an invalid encounter ID")
+    return EncounterIdentity(encounter_id, fight.get("name") or "Unknown encounter")
+
+
+# Keep the historical private name for existing internal callers and integrations.
+_is_boss = is_boss_fight
+_encounter = encounter_identity
