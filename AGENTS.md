@@ -39,6 +39,25 @@ Prefer the smallest implementation that satisfies the ticket while preserving es
 Current major areas include:
 
 ```text
+apps/backend/
+  app/
+  alembic/
+  tests/
+  mechanics/
+apps/web/
+  ...
+docs/
+  ...
+```
+
+`apps/backend` owns Python/server-side domain logic, persistence, integrations,
+and the Discord bot. `apps/web` owns the React/TypeScript presentation
+application. The future HTTP/OpenAPI boundary joins them. Browser code must not
+reimplement backend persistence or domain rules.
+
+The backend's Python package remains named `app`:
+
+```text
 app/
   db/                  Existing guild/player persistence
   discord_bot/         Discord bot and commands
@@ -76,6 +95,11 @@ In particular:
 - SQLAlchemy persistence models should not become the domain contract.
 - LLM output must never become the source of truth for game events.
 - Presentation code must consume structured results rather than recompute raid analysis.
+- Browser/UI code must not import or reimplement Python persistence models.
+- Shared web/backend contracts cross the HTTP API/OpenAPI boundary; they are not
+  shared by importing Python internals into the browser application.
+- Python domain and business logic remain authoritative. The web client presents
+  backend capabilities and must not become a second source of raid-analysis truth.
 
 ---
 
@@ -228,6 +252,9 @@ Normal tests must not require:
 - a running production database;
 - external services.
 
+Web tests follow the same deterministic rule: they must not require live Discord,
+OpenRouter, or Wipefest access. Use fixtures or mocked API boundaries instead.
+
 Live integration tests may exist separately, but they should be explicit and opt-in.
 
 Historical fixtures should be versioned.
@@ -290,23 +317,23 @@ Do not rely primarily on E2E tests when a unit or integration test can establish
 
 Use the repository's documented dependency manager and test runner.
 
-Use uv + pytest as the canonical project environment:
+Use uv + pytest from `apps/backend` as the canonical Python project environment:
 
 ```bash
-uv sync
-uv run pytest
+(cd apps/backend && uv sync)
+(cd apps/backend && uv run pytest)
 ```
 
 For focused development:
 
 ```bash
-uv run pytest tests/path/to/test_file.py
+(cd apps/backend && uv run pytest tests/path/to/test_file.py)
 ```
 
 or:
 
 ```bash
-uv run pytest tests/path/to/test_file.py::test_name
+(cd apps/backend && uv run pytest tests/path/to/test_file.py::test_name)
 ```
 
 Before completing a change, run:
@@ -677,10 +704,10 @@ List the exact commands run and results.
 Example:
 
 ```text
-uv run pytest tests/pull_coach -q
+(cd apps/backend && uv run pytest tests/pull_coach -q)
 42 passed
 
-uv run pytest -q
+(cd apps/backend && uv run pytest -q)
 87 passed
 ```
 

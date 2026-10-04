@@ -2,7 +2,7 @@
 name = "group-raiding"
 version = "0.1.0"
 description = "Discord bot and guild tooling for Presynaptic"
-readme = "README.md"
+readme = "../../README.md"
 requires-python = ">=3.10,<4"
 dependencies = [
     "py-cord>=2.4.1,<3",
