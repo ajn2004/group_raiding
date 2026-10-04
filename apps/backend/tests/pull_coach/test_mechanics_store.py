@@ -155,4 +155,5 @@ def test_live_and_catalog_factories_share_registry_configuration(tmp_path, monke
     monkeypatch.setattr(pull_coach, "WCLClient", lambda: object())
     workflow = pull_coach._configured_workflow()
     catalog = pull_coach._configured_catalog_discovery()
-    assert workflow.analyzer.registry.definitions == catalog.mechanic_registry.definitions
+    legacy_workflow = workflow.orchestrator.legacy.factory()
+    assert legacy_workflow.analyzer.registry.definitions == catalog.mechanic_registry.definitions

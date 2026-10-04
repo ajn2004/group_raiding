@@ -22,6 +22,9 @@ from app.pull_coach.workflow import (
     PullCoachConfigurationError, PullCoachWorkflow, PullCoachWorkflowError,
     UnsupportedEncounter,
 )
+from app.pull_coach.orchestration import CoachingOrchestrator, SourceMode
+from app.pull_coach.service import PullCoachService, source_selection_from_env
+from app.pull_coach.sources import LazyLegacyWCLCoachingSource, WipefestCoachingSource
 from app.pull_coach.history import (
     EncounterCatalogDiscovery,
     EncounterDiscoveryService,
@@ -40,8 +43,16 @@ log = logging.getLogger(__name__)
 
 
 def _configured_workflow():
-    analyzer = PullAnalyzer(configured_mechanics_registry())
-    return PullCoachWorkflow(WCLClient(), analyzer, ProgressionComparator(), CoachingSynthesizer())
+    client = WCLClient()
+    selection = source_selection_from_env()
+    def legacy_workflow():
+        return PullCoachWorkflow(client, PullAnalyzer(configured_mechanics_registry()),
+                                 ProgressionComparator(), CoachingSynthesizer())
+    wipefest = WipefestCoachingSource() if selection.mode is SourceMode.WIPEFEST_PRIMARY else None
+    legacy = LazyLegacyWCLCoachingSource(legacy_workflow)
+    if wipefest is None:
+        wipefest = legacy
+    return PullCoachService(client, CoachingOrchestrator(wipefest, legacy, selection))
 
 
 def _configured_catalog_discovery():
@@ -191,7 +202,7 @@ class HistoricalEncounterPicker(discord.ui.View):
         except (discord.HTTPException, discord.NotFound):
             return
         selection = HistoricalEncounterSelection(self.catalog.report_code, self.catalog.source_url, encounter_id)
-        if not summary.mechanics_supported:
+        if not summary.mechanics_supported and source_selection_from_env().mode is SourceMode.LEGACY_ONLY:
             try:
                 if self.on_unsupported_selection is None:
                     await interaction.followup.send(
@@ -290,6 +301,7 @@ class PullCoach(commands.Cog):
             workflow = self.workflow_factory()
             reference = selection.source_url or selection.report_code
             result = await asyncio.to_thread(workflow.run_encounter_sample, reference, selection.encounter_id)
+            result = getattr(result, "legacy_result", None) or result
             payload = self.presenter.present(result)
             channel = getattr(interaction, "channel", None)
             if channel is None:
@@ -314,6 +326,7 @@ class PullCoach(commands.Cog):
             code = parse_report_code(report)
             workflow = self.workflow_factory()
             result = await asyncio.to_thread(workflow.run, report, fight)
+            result = getattr(result, "legacy_result", None) or result
             payload = self.presenter.present(result)
             await ctx.followup.send(embed=to_discord_embed(payload),
                                     view=PullCoachDetailsView(payload.details))
