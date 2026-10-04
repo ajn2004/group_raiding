@@ -5,7 +5,7 @@ from app.pull_coach.models.contracts import (
     FindingCategory, ExposureState, MechanicDefinition, MechanicExposure, MechanicObservation, NormalizedEvent, ProgressionDelta,
     ProgressionStatus, PullAnalysis, PullIdentity, PullState, RaidReportIdentity,
     Role, Severity, SourceIdentity, SummaryMetrics, TimingWindow, normalized_event,
-    EventType,
+    EventType, is_raid_player,
 )
 
 __all__ = [name for name in globals() if not name.startswith("_")]
