@@ -176,6 +176,29 @@ def test_identity_upsert_from_independent_sessions_keeps_one_identity(tmp_path):
         engine.dispose()
 
 
+def test_identity_upsert_refreshes_loaded_instance(tmp_path):
+    from app.api.auth_repository import upsert_identity
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'identity-refresh.db'}")
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine, expire_on_commit=False)
+    try:
+        with TestingSession() as session:
+            original = upsert_identity(session, "refresh", "old", "Old", None)
+            session.commit()
+            updated = upsert_identity(session, "refresh", "new", "New", "avatar")
+            assert updated is original
+            assert (updated.username, updated.display_name, updated.avatar_url) == ("new", "New", "avatar")
+            session.commit()
+        with TestingSession() as verify:
+            rows = verify.scalars(select(WebIdentity).where(WebIdentity.discord_user_id == "refresh")).all()
+            assert len(rows) == 1
+            assert (rows[0].username, rows[0].display_name, rows[0].avatar_url) == ("new", "New", "avatar")
+    finally:
+        Base.metadata.drop_all(engine)
+        engine.dispose()
+
+
 def test_state_is_single_use_and_provider_denial_returns_neutral_redirect(client):
     login = client.get("/api/auth/discord/login", follow_redirects=False)
     state = parse_qs(urlparse(login.headers["location"]).query)["state"][0]

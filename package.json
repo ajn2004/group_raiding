@@ -9,6 +9,7 @@
     "build": "pnpm web:build",
     "backend:sync": "cd apps/backend && uv sync",
     "backend:test": "cd apps/backend && uv run pytest",
+    "backend:test-postgres": "cd apps/backend && uv run pytest --postgres -m postgres -q",
     "backend:bot": "cd apps/backend && uv run python main.py",
     "backend:api": "cd apps/backend && uv run uvicorn app.api.main:app --reload",
     "backend:openapi": "cd apps/backend && uv run python scripts/export_openapi.py",

@@ -32,3 +32,4 @@ package = false
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["."]
+markers = ["postgres: opt-in integration tests requiring TEST_DATABASE_URL"]

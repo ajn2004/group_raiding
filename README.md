@@ -52,6 +52,46 @@ The fresh-PostgreSQL migration acceptance test is opt-in. Set
 `TEST_POSTGRES_ADMIN_URL` to a PostgreSQL URL for a user permitted to create and
 drop databases, then run `uv run pytest tests/test_fresh_postgres_bootstrap.py`.
 
+### PostgreSQL integration tests (DAL-91)
+
+The regular backend suite remains fast and isolated on SQLite where appropriate;
+it runs without PostgreSQL configuration. The opt-in PostgreSQL lane validates
+the real Alembic chain, PostgreSQL constraints/upserts/timestamps and shared
+caller-owned repository sessions. It uses a unique schema per run in an
+explicitly configured **test-only** PostgreSQL database. The fixture removes
+only that schema after disposing test connections. Never point it at a
+production database; use the dedicated disposable service below.
+
+Start a dedicated local service with dummy test credentials (Docker required):
+
+```bash
+docker run -d --name group-raiding-dal91-postgres \
+  -e POSTGRES_USER=dal91_test -e POSTGRES_PASSWORD=dal91_test_only \
+  -e POSTGRES_DB=dal91_test -p 55432:5432 postgres:16
+until docker exec group-raiding-dal91-postgres pg_isready -U dal91_test -d dal91_test; do sleep 1; done
+```
+
+From the repository root, configure the test infrastructure URL and run the
+explicit lane. This setting is read by pytest only; application configuration
+does not use it or fall back to `SQLALCHEMY_DATABASE_*`:
+
+```bash
+TEST_DATABASE_URL='postgresql+psycopg2://dal91_test:dal91_test_only@127.0.0.1:55432/dal91_test' pnpm backend:test-postgres
+docker rm -f group-raiding-dal91-postgres
+```
+
+Equivalent direct command from `apps/backend`:
+
+```bash
+TEST_DATABASE_URL='postgresql+psycopg2://dal91_test:dal91_test_only@127.0.0.1:55432/dal91_test' uv run pytest --postgres -m postgres -q
+```
+
+The explicit lane fails with an actionable error if `TEST_DATABASE_URL` is
+missing, the URL is not PostgreSQL, or the service cannot be reached. It never
+falls back to SQLite. Ordinary `pnpm backend:test` / `uv run pytest -q` clearly
+deselects the PostgreSQL-marked tests and does not connect to a database.
+CI can run the same explicit command with an ephemeral PostgreSQL service and
+the same test-only environment variable; no CI workflow is currently present.
 Install JavaScript workspace dependencies from the repository root with:
 
 ```bash

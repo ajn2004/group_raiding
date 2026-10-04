@@ -46,7 +46,7 @@ def upsert_identity(db: Session, discord_user_id: str, username: str, display_na
         index_elements=[WebIdentity.discord_user_id],
         set_={"username": username, "display_name": display_name, "avatar_url": avatar_url},
     ).returning(WebIdentity)
-    identity = db.scalars(statement).one()
+    identity = db.scalars(statement, execution_options={"populate_existing": True}).one()
     db.flush()
     return identity
 
