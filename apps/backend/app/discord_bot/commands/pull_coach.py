@@ -22,7 +22,7 @@ from app.pull_coach.workflow import (
     PullCoachConfigurationError, PullCoachWorkflow, PullCoachWorkflowError,
     UnsupportedEncounter,
 )
-from app.pull_coach.orchestration import CoachingOrchestrator, SourceMode
+from app.pull_coach.orchestration import CoachingOrchestrator, CoachingSourceError, SourceMode
 from app.pull_coach.service import PullCoachService, source_selection_from_env
 from app.pull_coach.sources import LazyLegacyWCLCoachingSource, WipefestCoachingSource
 from app.pull_coach.history import (
@@ -97,6 +97,8 @@ def _friendly_error(exc):
         return "That fight is still in progress; Pull Coach only analyzes completed pulls."
     if isinstance(exc, InvalidFightSelector):
         return "Fight must be `latest` or a Warcraft Logs fight ID."
+    if isinstance(exc, CoachingSourceError):
+        return "Coaching is temporarily unavailable or not configured. Please try again later."
     if isinstance(exc, PullCoachWorkflowError):
         return "I couldn't select that pull. Check the fight ID and try again."
     return "I loaded the pull, but Pull Coach couldn't analyze it."
@@ -334,6 +336,26 @@ class PullCoach(commands.Cog):
             log.error("Pull Coach command failed report=%s fight=%s stage=command error_type=%s",
                       code, fight, type(exc).__name__)
             await ctx.followup.send(_friendly_error(exc))
+
+    @discord.slash_command(name="how-did-i-do", description="Get private coaching for a character in a fight")
+    async def how_did_i_do(self, ctx: discord.ApplicationContext,
+                           report: discord.Option(str, "Warcraft Logs report URL or code"),
+                           fight: discord.Option(str, "latest or Warcraft Logs fight ID", default="latest"),
+                           character: discord.Option(str, "Wipefest character name or player ID")):
+        await ctx.defer(ephemeral=True)
+        try:
+            service = self.workflow_factory()
+            run_player = getattr(service, "run_player", None)
+            if run_player is None:
+                raise CoachingSourceError("individual coaching is not configured")
+            result = await asyncio.to_thread(run_player, report, fight, character)
+            result.coaching["_character"] = character
+            payload = self.presenter.present(result)
+            await ctx.followup.send(embed=to_discord_embed(payload),
+                                    view=PullCoachDetailsView(payload.details), ephemeral=True)
+        except Exception as exc:
+            log.error("Individual Pull Coach failed stage=command error_type=%s", type(exc).__name__)
+            await ctx.followup.send(_friendly_error(exc), ephemeral=True)
 
     @discord.slash_command(name="pullcoach-history", description="Browse encounters in a Warcraft Logs report")
     async def pullcoach_history(self, ctx: discord.ApplicationContext,

@@ -47,6 +47,26 @@ class PullCoachService:
                 raise FightNotCompleted(f"fight {selector} is still in progress")
         return self.orchestrator.coach(report_reference, target)
 
+    def run_player(self, report_reference: str, fight_selector: str, character: str):
+        code = parse_report_code(report_reference)
+        fights = self.wcl_client.report_data(code).get("fights", [])
+        selector = str(fight_selector).strip().lower()
+        if selector == "latest":
+            eligible = [f for f in fights if _is_boss(f) and not f.get("inProgress") and f.get("endTime") is not None]
+            if not eligible:
+                raise NoCompletedPulls("report has no completed boss encounter fights")
+            target = max(eligible, key=fight_sort_key)
+        elif selector.isdigit():
+            target = next((f for f in fights if str(f.get("id")) == selector), None)
+            if target is None or not _is_boss(target):
+                from app.pull_coach.workflow import FightNotFound
+                raise FightNotFound(f"fight {selector} was not found")
+            if target.get("inProgress") or target.get("endTime") is None:
+                raise FightNotCompleted(f"fight {selector} is still in progress")
+        else:
+            raise InvalidFightSelector("fight must be 'latest' or a Warcraft Logs fight ID")
+        return self.orchestrator.coach_player(report_reference, target, character)
+
     def run_encounter_sample(self, report_reference: str, encounter_id: str):
         code = parse_report_code(report_reference)
         requested = normalize_encounter_id(encounter_id)

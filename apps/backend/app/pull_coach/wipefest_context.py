@@ -124,7 +124,8 @@ def build_player_coaching_context(snapshot: Any, *, player_id: int | str) -> dic
     payload, source = _snapshot(snapshot)
     player_key = str(player_id)
     player = next((p for p in payload.get("raid", {}).get("players", []) or []
-                   if str(p.get("actorId", p.get("id"))) == player_key or str(p.get("id")) == player_key), None)
+                   if str(p.get("actorId", p.get("id"))) == player_key or str(p.get("id")) == player_key
+                   or str(p.get("name", "")).casefold() == player_key.casefold()), None)
     if player is None:
         raise ValueError(f"Wipefest player {player_id!r} is not present in the snapshot roster")
     actor_key = str(player.get("actorId", player.get("id")))

@@ -9,6 +9,7 @@ from app.db.models import Base
 from app.db.models.pull_coach import CoachingProfile, CoachingProfileRevision, CoachingSession, CoachingSessionMessage
 from app.db.models.wipefest import WipefestFightSnapshot
 from app.pull_coach.persistence.coaching_sessions import CoachingSessionRepository
+from app.pull_coach.persistence.coaching_sessions import context_fingerprint
 from app.pull_coach.coaching.finalization import finalize_coaching_response
 from app.pull_coach.coaching.insights import InsightGateConfig
 
@@ -77,6 +78,39 @@ def test_player_session_is_scoped_and_raid_requires_no_target(seeded_session):
         repo.start(snapshot_id=snapshot_id, encounter_id="boss-1",
             audience="player", context_schema_version="context-v1", request_context={},
             profile_revision_id=profile_id)
+
+
+def test_completed_session_can_be_reused_by_audience_and_player(seeded_session):
+    _, repo, snapshot_id, profile_id = seeded_session
+    raid = repo.start(snapshot_id=snapshot_id, encounter_id="boss-1", audience="raid",
+        context_schema_version="context-v1", request_context={}, profile_revision_id=profile_id)
+    player = repo.start(snapshot_id=snapshot_id, encounter_id="boss-1", audience="player",
+        target_player_id="actor-7", context_schema_version="context-v1", request_context={},
+        profile_revision_id=profile_id)
+    repo.complete(raid, structured_response={"recommendations": []}, raw_response={})
+    repo.complete(player, structured_response={"recommendations": ["private"]}, raw_response={})
+    assert repo.completed_for(snapshot_id=snapshot_id, audience="raid").id == raid.id
+    assert repo.completed_for(snapshot_id=snapshot_id, audience="player",
+                               target_player_id="actor-7").id == player.id
+    assert repo.completed_for(snapshot_id=snapshot_id, audience="player",
+                               target_player_id="another-player") is None
+
+
+def test_completed_session_cache_matches_profile_context_and_gate(seeded_session):
+    _, repo, snapshot_id, profile_id = seeded_session
+    context = {"version": 1}
+    run = repo.start(snapshot_id=snapshot_id, encounter_id="boss-1", audience="raid",
+        context_schema_version="context-v1", request_context=context, profile_revision_id=profile_id)
+    repo.complete(run, structured_response={"recommendations": []}, raw_response={},
+        insight_pipeline={"candidates": [], "decisions": [], "displayed_ids": [],
+            "generator": "llm", "gate": "threshold", "gate_version": "1",
+            "failure_policy": "fail_closed", "gate_fingerprint": "gate-a"})
+    identity = dict(snapshot_id=snapshot_id, audience="raid", profile_revision_id=profile_id,
+        context_fingerprint=context_fingerprint(context), gate_fingerprint="gate-a")
+    assert repo.completed_for(**identity).id == run.id
+    assert repo.completed_for(**{**identity, "profile_revision_id": profile_id + 1}) is None
+    assert repo.completed_for(**{**identity, "context_fingerprint": "different"}) is None
+    assert repo.completed_for(**{**identity, "gate_fingerprint": "gate-b"}) is None
 
 
 def test_append_after_single_message_uses_next_sequence(seeded_session):
