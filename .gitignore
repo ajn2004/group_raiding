@@ -21,3 +21,12 @@ data/*.json
 /data/*.json
 /venv/
 /.venv/
+
+# Runtime-generated Pull Coach lifecycle artifacts may contain private data.
+# Keep the lanes themselves in the repository, but not their contents.
+/mechanics/pull-coach/discovered/*
+!/mechanics/pull-coach/discovered/.gitkeep
+/mechanics/pull-coach/drafts/*
+!/mechanics/pull-coach/drafts/.gitkeep
+/mechanics/pull-coach/reviews/*
+!/mechanics/pull-coach/reviews/.gitkeep

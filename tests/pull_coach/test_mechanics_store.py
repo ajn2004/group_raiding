@@ -113,6 +113,21 @@ def test_configuration_root_precedence_and_legacy_fallback(tmp_path, monkeypatch
         configured_mechanics_registry()
 
 
+def test_checked_in_live_mechanics_root_loads_and_blank_root_allows_legacy(monkeypatch, tmp_path):
+    checked_in_root = Path("mechanics/pull-coach")
+    registry = DirectoryMechanicsStore(checked_in_root).load_verified_registry()
+    assert registry.rules == ()
+    assert {path.name for path in checked_in_root.iterdir()} == {
+        "verified", "discovered", "drafts", "reviews",
+    }
+
+    legacy = tmp_path / "legacy.json"
+    legacy.write_text(json.dumps(definition("2")))
+    monkeypatch.setenv("PULL_COACH_MECHANICS_ROOT", "")
+    monkeypatch.setenv("PULL_COACH_MECHANICS_FILE", str(legacy))
+    assert configured_mechanics_registry().definitions[0].encounter.encounter_id == "2"
+
+
 def test_verified_rules_retain_their_source_provenance(tmp_path):
     store = DirectoryMechanicsStore(tmp_path)
     store.write_verified("1", definition("1"))

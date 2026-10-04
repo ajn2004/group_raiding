@@ -28,8 +28,34 @@ analysis/evidence → progression → coaching → Discord presentation
 The `/pullcoach` Discord command accepts a Warcraft Logs report URL or code and
 an optional fight selector (`latest` by default, or a fight ID), then presents
 the resulting raid coaching. Live use requires `DISCORD_BOT_TOKEN`, WCL
-credentials, and `PULL_COACH_MECHANICS_FILE` to
-point to a verified DAL-45 mechanic-definition JSON file for that encounter.
+credentials, and a configured mechanics registry. The preferred setting is a
+writable directory root:
+
+```dotenv
+PULL_COACH_MECHANICS_ROOT=/path/to/pull-coach-mechanics
+```
+
+Do not switch a live bot to the checked-in `mechanics/pull-coach` root until it
+contains the intended verified encounter definitions. A configured directory
+root takes precedence over `PULL_COACH_MECHANICS_FILE`, so the currently empty
+checked-in registry would otherwise replace the legacy definitions with an
+empty registry.
+
+The root has the following layout:
+
+```text
+pull-coach-mechanics/
+  verified/   # only these JSON files enter PullAnalyzer
+  discovered/ # factual discovery artifacts; never production analyzer input
+  drafts/     # unverified proposals; never production analyzer input
+  reviews/    # review lifecycle records
+```
+
+The directory must be writable by the bot when automatic unsupported-encounter
+discovery is enabled. `PULL_COACH_MECHANICS_FILE` remains available only as a
+backwards-compatible single-file fallback when the root setting is unset or
+blank. Do not point the live bot at `app/pull_coach/mechanics/definitions/`;
+those files are test/demo references, not a production registry.
 The current WCL actor ingestion does not establish authoritative active-pull
 roles. Role-specific guidance is emitted only when authoritative `Role` data
 reaches analysis; Pull Coach does not infer player role from class/spec or
