@@ -83,6 +83,7 @@ def run_migrations_online():
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            version_table_schema=config.attributes.get("version_table_schema"),
             **context_extra_options,
         )
 
