@@ -1,6 +1,7 @@
 """Live adapters for Wipefest coaching and the established WCL workflow."""
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from app.pull_coach.coaching.inference import (
@@ -74,7 +75,11 @@ class WipefestCoachingSource:
                 coaching_session = sessions.start(snapshot_id=snapshot.id, encounter_id=encounter_id,
                     context_schema_version=str(context["context_schema_version"]), request_context=context,
                     profile_revision_id=revision.id, audience=audience, target_player_id=target_player_id,
-                    target_player_name=None if player_info is None else player_info.get("name"))
+                    target_player_name=None if player_info is None else player_info.get("name"),
+                    messages=({"role": "system", "content": revision.system_prompt},
+                        {"role": "user", "content": revision.user_prompt_template +
+                         "\n\nCoaching context:\n" + json.dumps(
+                             context, sort_keys=True, ensure_ascii=False, allow_nan=False)}))
                 try:
                     if self.inference is not None:
                         inference = self.inference
@@ -101,6 +106,8 @@ class WipefestCoachingSource:
                     raise CoachingSourceError("coaching inference configuration is invalid") from exc
                 response = finalize_coaching_response(inference_result=result, context=context,
                     gate_config=gate_config, session=coaching_session, sessions=sessions)
+                sessions.append_message(coaching_session, role="assistant",
+                    content=json.dumps(response, sort_keys=True, ensure_ascii=False))
                 session.commit()
                 response = dict(response)
                 response["_session_id"] = coaching_session.id
