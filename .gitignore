@@ -25,6 +25,9 @@ apps/backend/data/*.json
 **/.venv/
 **/.pytest_cache/
 
+# Runtime OAuth sessions and SQLite journal/sidecar files.
+**/auth_sessions.sqlite3*
+
 # Root and workspace Node tooling
 /node_modules/
 **/node_modules/

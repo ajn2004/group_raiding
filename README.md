@@ -74,6 +74,53 @@ The generated document belongs in
 should live alongside it in `apps/web/src/lib/api/generated/` and be generated
 from this contract rather than duplicating backend response definitions.
 
+### Discord web sign-in (DAL-81)
+
+The Python API owns Discord OAuth and durable web sessions. The browser only
+uses the same-origin Next.js `/api` proxy; do not call the Python port directly
+from the browser. Required backend settings are in `apps/backend/.env.example`:
+
+- `DISCORD_OAUTH_CLIENT_ID` and `DISCORD_OAUTH_CLIENT_SECRET`: OAuth application
+  credentials from Discord Developer Portal → OAuth2 → General.
+- `PUBLIC_APP_URL`: the browser-visible application origin.
+- `DISCORD_OAUTH_CALLBACK_URL`: exactly
+  `${PUBLIC_APP_URL}/api/auth/discord/callback`.
+- `DISCORD_GUILD_ID`: community whose current-user membership may be read. It
+  does not grant application permissions.
+- `AUTH_SESSION_DATABASE`: durable SQLite file for opaque session hashes and
+  one-use OAuth state. Ensure its directory is writable and persisted/backed up
+  across restarts in deployed environments.
+
+Register `http://localhost:3000/api/auth/discord/callback` as the redirect URI
+in the Discord Developer Portal for local use. For production, register the
+exact HTTPS callback, for example
+`https://group.example/api/auth/discord/callback`, and set `PUBLIC_APP_URL` and
+`DISCORD_OAUTH_CALLBACK_URL` to that matching origin. Keep the Next.js proxy in
+front of the API so the session cookie is first-party. Local HTTP cookies omit
+`Secure`; HTTPS deployments set it. Cookies are HTTP-only and SameSite=Lax.
+
+No session signing/encryption secret is required: the API issues cryptographically
+random opaque cookies, stores only a SHA-256 token hash, and invalidates sessions
+server-side on logout. Discord OAuth tokens are transient server-side only and
+are not persisted. This web OAuth client is independent of `DISCORD_BOT_TOKEN`.
+
+Start local testing in separate terminals:
+
+```bash
+# apps/backend/.env: fill the OAuth client ID/secret and Discord guild ID
+pnpm backend:api
+pnpm web:dev
+```
+
+Open `http://localhost:3000`, select **Sign in with Discord**, authorize, and
+verify the return to the app. Refresh to verify session restoration; sign out
+and verify the signed-out view. Automated auth tests use a fake Discord transport
+and need no credentials. API contracts are `GET /api/auth/session`,
+`GET /api/auth/discord/login?return_to=/safe/path`,
+`GET /api/auth/discord/callback`, and `POST /api/auth/logout` with the session
+response's `csrf_token` in `X-CSRF-Token`. Callback redirects only to a same-site
+absolute path; external return destinations are rejected.
+
 The Playwright smoke test starts the local FastAPI app and Next.js app, then
 checks the real browser-to-Python `/api/healthz` request through the same-origin
 rewrite. It needs no external services. Install its browser once with

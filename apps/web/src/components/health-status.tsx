@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import styles from "./health-status.module.css";
 import { api } from "@/lib/api/client";
 
 type HealthState =
@@ -11,30 +12,26 @@ type HealthState =
 export function HealthStatus() {
   const [health, setHealth] = useState<HealthState>({ status: "loading" });
 
-  useEffect(() => {
-    let active = true;
-
-    api.GET("/api/healthz").then(({ data, error }) => {
-      if (!active) return;
-      if (error || !data || data.status !== "ok") {
-        setHealth({ status: "error" });
-      } else {
-        setHealth({ status: "connected", apiVersion: data.api_version });
-      }
-    }).catch(() => {
-      if (active) setHealth({ status: "error" });
-    });
-
-    return () => { active = false; };
+  const checkHealth = useCallback(async () => {
+    setHealth({ status: "loading" });
+    try {
+      const { data, error } = await api.GET("/api/healthz");
+      if (error || !data || data.status !== "ok") setHealth({ status: "error" });
+      else setHealth({ status: "connected", apiVersion: data.api_version });
+    } catch {
+      setHealth({ status: "error" });
+    }
   }, []);
 
+  useEffect(() => { void checkHealth(); }, [checkHealth]);
+
   if (health.status === "loading") {
-    return <p role="status">Checking Python API…</p>;
+    return <div className={styles.health} role="status" aria-live="polite" aria-atomic="true"><span className={`${styles.dot} ${styles.loading}`} aria-hidden="true" />Connecting to API…</div>;
   }
 
   if (health.status === "error") {
-    return <p role="alert">Python API is unavailable. Check that the API is running and try again.</p>;
+    return <div className={styles.health} role="status" aria-live="polite" aria-atomic="true"><span className={`${styles.dot} ${styles.error}`} aria-hidden="true" />API unavailable <button className={styles.retry} type="button" onClick={() => void checkHealth()}>Retry</button></div>;
   }
 
-  return <p role="status">Python API connected (version {health.apiVersion}).</p>;
+  return <div className={styles.health} role="status" aria-live="polite" aria-atomic="true"><span className={`${styles.dot} ${styles.connected}`} aria-hidden="true" />API connected · {health.apiVersion}</div>;
 }

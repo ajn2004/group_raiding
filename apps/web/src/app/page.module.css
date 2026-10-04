@@ -1,20 +1,67 @@
-.main {
-  display: grid;
+.shell {
+  display: flex;
   min-height: 100vh;
-  place-items: center;
-  padding: 2rem;
+  min-height: 100dvh;
+  flex-direction: column;
 }
 
-.card {
-  width: min(100%, 38rem);
-  padding: 3rem;
-  border: 1px solid #dce2eb;
-  border-radius: 1rem;
-  background: white;
-  box-shadow: 0 1.5rem 4rem rgb(23 32 51 / 8%);
+.header {
+  position: relative;
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
 }
 
-.card h1 { margin: 0 0 1rem; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; }
-.card p { color: var(--muted); }
-.card p[role="status"]::before { color: var(--accent); content: "● "; }
-.eyebrow { margin: 0 0 .75rem; color: var(--accent) !important; font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.wordmark {
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+
+.main { display: grid; flex: 1; place-items: center; padding: 24px; }
+
+.auth { display: flex; max-width: 100%; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; text-align: center; }
+.auth h1 { width: 100%; margin: 0; font-size: 20px; font-weight: 600; line-height: 1.35; }
+.supporting { width: 100%; margin: -8px 0 4px; color: var(--muted); }
+.loading { color: var(--muted); }
+.signIn { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 9px; padding: 0 15px; border: 0; border-radius: 6px; background: var(--accent); color: #111315; font: inherit; font-weight: 600; cursor: pointer; }
+.signIn svg { width: 19px; height: 19px; }
+.signIn:hover { filter: brightness(1.1); }
+.signIn:focus-visible, .signOut:focus-visible, .authError button:focus-visible, .accountTrigger:focus-visible { outline: 2px solid var(--foreground); outline-offset: 3px; }
+.signIn:disabled { opacity: .7; cursor: wait; }
+.account { position: relative; }
+.accountTrigger { display: grid; width: 32px; height: 32px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.avatar, .avatarFallback { width: 30px; height: 30px; border-radius: 50%; }
+.avatar { object-fit: cover; }
+.avatarFallback { display: grid; place-items: center; background: #292d33; color: var(--foreground); font-weight: 600; }
+.menu { position: absolute; z-index: 5; top: calc(100% + 6px); right: 0; min-width: 112px; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: #17191d; }
+.signOut, .authError button { padding: 6px 8px; border: 0; background: none; color: var(--foreground); font: inherit; cursor: pointer; }
+.menu .signOut { width: 100%; text-align: left; }
+.menu .signOut:hover { background: #252930; }
+.signOut:disabled { opacity: .7; cursor: wait; }
+.menuError { max-width: 220px; margin: 4px 6px; color: var(--muted); font-size: 12px; }
+.authError { width: 100%; color: var(--muted); font-size: 13px; }
+.authError button { margin-left: 5px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+.statusStrip {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 6px 20px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.appStatus { white-space: nowrap; }
+
+@media (max-width: 420px) {
+  .header { padding-right: 14px; padding-left: 14px; }
+  .statusStrip { flex-wrap: wrap; padding-right: 14px; padding-left: 14px; }
+}
