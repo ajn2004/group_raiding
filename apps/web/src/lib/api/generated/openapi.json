@@ -177,6 +177,186 @@
         "title": "LogoutResponse",
         "type": "object"
       },
+      "OpenRouterModelResponse": {
+        "properties": {
+          "context_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Length"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/OpenRouterPricingResponse"
+          },
+          "supports_response_format": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supports Response Format"
+          },
+          "supports_structured_outputs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supports Structured Outputs"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "context_length",
+          "pricing",
+          "supports_response_format",
+          "supports_structured_outputs"
+        ],
+        "title": "OpenRouterModelResponse",
+        "type": "object"
+      },
+      "OpenRouterModelsResponse": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "const": "catalog_unavailable",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/OpenRouterModelResponse"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "models"
+        ],
+        "title": "OpenRouterModelsResponse",
+        "type": "object"
+      },
+      "OpenRouterPricingResponse": {
+        "properties": {
+          "input_dollars_per_million_tokens": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Dollars Per Million Tokens"
+          },
+          "input_price_per_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Price Per Token"
+          },
+          "output_dollars_per_million_tokens": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Dollars Per Million Tokens"
+          },
+          "output_price_per_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Price Per Token"
+          },
+          "price_unit": {
+            "title": "Price Unit",
+            "type": "string"
+          },
+          "raw_input_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Input Price"
+          },
+          "raw_output_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Output Price"
+          }
+        },
+        "required": [
+          "input_dollars_per_million_tokens",
+          "output_dollars_per_million_tokens",
+          "input_price_per_token",
+          "output_price_per_token",
+          "raw_input_price",
+          "raw_output_price",
+          "price_unit"
+        ],
+        "title": "OpenRouterPricingResponse",
+        "type": "object"
+      },
       "RbacMappingResponse": {
         "properties": {
           "capability": {
@@ -595,6 +775,27 @@
         "summary": "Refresh Session",
         "tags": [
           "authentication"
+        ]
+      }
+    },
+    "/api/coaching/openrouter/models": {
+      "get": {
+        "operationId": "listOpenRouterModels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenRouterModelsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Openrouter Models",
+        "tags": [
+          "coaching"
         ]
       }
     },
