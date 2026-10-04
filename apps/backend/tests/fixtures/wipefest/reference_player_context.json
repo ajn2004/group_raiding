@@ -1,0 +1,992 @@
+{
+  "context_schema_version": 1,
+  "fight": {
+    "reportCode": "j8wDLpCTaqhB7M1x",
+    "reportId": "j8wDLpCTaqhB7M1x",
+    "fightId": "10",
+    "encounterId": 1507,
+    "encounterName": "Imperial Vizier Zor'lok",
+    "difficulty": 10004,
+    "result": "wipe",
+    "durationMs": 97058,
+    "bossPercentage": 7404,
+    "fightPercentage": 7404
+  },
+  "player": {
+    "playerId": 10,
+    "name": "Aleannora",
+    "class": "Druid",
+    "spec": "Restoration",
+    "role": "Healer",
+    "itemLevel": 505.0,
+    "server": "Galakras",
+    "region": "US"
+  },
+  "playerValues": [
+    {
+      "insightGroup": "1507",
+      "insightId": "2",
+      "value": 100.0,
+      "weight": 52.7945945945946,
+      "weightedValue": 5279.45945945946,
+      "isBonus": false,
+      "statisticName": "Hits",
+      "statisticUnscaledValue": 0.0,
+      "frequency": 0,
+      "interval": {
+        "unit": "EntireFight",
+        "startUnit": 0,
+        "endUnit": 1,
+        "startTimestamp": 0,
+        "endTimestamp": 97058
+      }
+    },
+    {
+      "insightGroup": "1507",
+      "insightId": "3",
+      "value": 100.0,
+      "weight": 57.4405405405405,
+      "weightedValue": 5744.05405405405,
+      "isBonus": false,
+      "statisticName": "Hits",
+      "statisticUnscaledValue": 0.0,
+      "frequency": 0,
+      "interval": {
+        "unit": "EntireFight",
+        "startUnit": 0,
+        "endUnit": 1,
+        "startTimestamp": 0,
+        "endTimestamp": 97058
+      }
+    },
+    {
+      "insightGroup": "raidwc",
+      "insightId": "0",
+      "value": 100.0,
+      "weight": 57.3108108108108,
+      "weightedValue": 5731.08108108108,
+      "isBonus": false,
+      "statisticName": "Healing",
+      "statisticUnscaledValue": 0.0,
+      "frequency": 0,
+      "interval": {
+        "unit": "EntireFight",
+        "startUnit": 0,
+        "endUnit": 1,
+        "startTimestamp": 0,
+        "endTimestamp": 97058
+      }
+    },
+    {
+      "insightGroup": "raidwc",
+      "insightId": "1",
+      "value": 0.0,
+      "weight": 62.672972972973,
+      "weightedValue": 0.0,
+      "isBonus": true,
+      "statisticName": "Total",
+      "statisticUnscaledValue": 0.0,
+      "frequency": 0,
+      "interval": {
+        "unit": "EntireFight",
+        "startUnit": 0,
+        "endUnit": 1,
+        "startTimestamp": 0,
+        "endTimestamp": 97058
+      }
+    },
+    {
+      "insightGroup": "raidwc",
+      "insightId": "3",
+      "value": 0.0,
+      "weight": 62.1027027027027,
+      "weightedValue": 0.0,
+      "isBonus": false,
+      "statisticName": "Events",
+      "statisticUnscaledValue": 1.0,
+      "frequency": 0,
+      "interval": {
+        "unit": "EntireFight",
+        "startUnit": 0,
+        "endUnit": 1,
+        "startTimestamp": 0,
+        "endTimestamp": 97058
+      }
+    },
+    {
+      "insightGroup": "raidwc",
+      "insightId": "6",
+      "value": 1.0,
+      "weight": 58.5297297297297,
+      "weightedValue": 58.5297297297297,
+      "isBonus": true,
+      "statisticName": "Score",
+      "statisticUnscaledValue": 8651.25,
+      "frequency": 0,
+      "interval": {
+        "unit": "EntireFight",
+        "startUnit": 0,
+        "endUnit": 1,
+        "startTimestamp": 0,
+        "endTimestamp": 97058
+      }
+    }
+  ],
+  "insights": [
+    {
+      "identity": {
+        "group": "raidwc",
+        "id": "3",
+        "interval": {
+          "unit": "EntireFight",
+          "startUnit": 0,
+          "endUnit": 1,
+          "startTimestamp": 0,
+          "endTimestamp": 97058
+        }
+      },
+      "title": "Died to Sonic Pulse Sonic Pulse / Song of the Empress Song of the Empress 9 times.",
+      "details": "",
+      "major": false,
+      "weight": 62.1027027027027,
+      "statistics": [
+        {
+          "name": "Events",
+          "value": 0.5563683570648479,
+          "percentile": 0,
+          "unscaledValue": 9.0
+        }
+      ],
+      "aggregatedStatistics": [],
+      "statisticsForPlayers": [
+        {
+          "playerId": 10,
+          "statistics": [
+            {
+              "name": "Events",
+              "value": 0.6181870634053865,
+              "percentile": 0,
+              "unscaledValue": 1.0
+            }
+          ]
+        }
+      ],
+      "values": {
+        "averageTimestamp": 86419.77777777778,
+        "totalEvents": 9,
+        "timestamps": [
+          75627,
+          75628,
+          79942,
+          80948,
+          91730,
+          91731,
+          93722,
+          93723,
+          94727
+        ],
+        "players": [
+          {
+            "id": 3,
+            "guid": 99394880,
+            "name": "Onmyshaman",
+            "frequency": 1
+          },
+          {
+            "id": 4,
+            "guid": 99488014,
+            "name": "Manaslu",
+            "frequency": 1
+          },
+          {
+            "id": 2,
+            "guid": 99488076,
+            "name": "Chilatte",
+            "frequency": 1
+          },
+          {
+            "id": 7,
+            "guid": 99488003,
+            "name": "Deego",
+            "frequency": 1
+          },
+          {
+            "id": 10,
+            "guid": 99487903,
+            "name": "Aleannora",
+            "frequency": 1
+          },
+          {
+            "id": 1,
+            "guid": 99487913,
+            "name": "Lustletsgo",
+            "frequency": 1
+          },
+          {
+            "id": 8,
+            "guid": 99488015,
+            "name": "Peterbread",
+            "frequency": 1
+          },
+          {
+            "id": 6,
+            "guid": 99488030,
+            "name": "Klesha",
+            "frequency": 1
+          },
+          {
+            "id": 5,
+            "guid": 99487986,
+            "name": "Medys",
+            "frequency": 1
+          }
+        ]
+      }
+    },
+    {
+      "identity": {
+        "group": "raidwc",
+        "id": "6",
+        "interval": {
+          "unit": "EntireFight",
+          "startUnit": 0,
+          "endUnit": 1,
+          "startTimestamp": 0,
+          "endTimestamp": 97058
+        }
+      },
+      "title": "Used 10/10 Flask of the EarthFlask of the Warm SunFlask of Spring Blossoms Flasks and ate 7/10 Well FedWell FedWell FedWell Fed Food. Equipped 7.8 Enchants, 10.7 Gems, and 3.8 Tier Pieces with an average Item Level of 504.5.",
+      "details": "Player Flask Food Enchants Gems Item Level T14 Readiness Chilatte Flask of the Earth Well Fed 11 505.6 5/5 9306 Medys Flask of the Earth Well Fed 11 504.4 5/5 9294 Onmyshaman Flask of the Warm Sun Well Fed 11 500.4 4/5 9254 Deego Flask of Spring Blossoms Well Fed 10 505.9 4/5 9209 Manaslu Flask of the Warm Sun Well Fed 10 505.4 4/5 9204 Klesha Flask of the Warm Sun Well Fed 11 503.9 4/5 9088 Gekkerless Flask of the Warm Sun 11 504.3 4/5 8942 Aleannora Flask of the Warm Sun 10 505.1 4/5 8651 Peterbread Flask of Spring Blossoms Well Fed 10 504.0 3/5 8590 Lustletsgo Flask of the Warm Sun 12 506.3 1/5 7862",
+      "major": false,
+      "weight": 58.52972972972973,
+      "statistics": [
+        {
+          "name": "Score",
+          "value": 8940.345833333333,
+          "percentile": 22,
+          "unscaledValue": 89403.45833333333
+        }
+      ],
+      "aggregatedStatistics": [],
+      "statisticsForPlayers": [
+        {
+          "playerId": 10,
+          "statistics": [
+            {
+              "name": "Score",
+              "value": 8651.25,
+              "percentile": 1,
+              "unscaledValue": 8651.25
+            }
+          ]
+        }
+      ],
+      "values": {
+        "players": [
+          {
+            "id": 2,
+            "name": "Chilatte"
+          },
+          {
+            "id": 5,
+            "name": "Medys"
+          },
+          {
+            "id": 3,
+            "name": "Onmyshaman"
+          },
+          {
+            "id": 7,
+            "name": "Deego"
+          },
+          {
+            "id": 4,
+            "name": "Manaslu"
+          },
+          {
+            "id": 6,
+            "name": "Klesha"
+          },
+          {
+            "id": 9,
+            "name": "Gekkerless"
+          },
+          {
+            "id": 10,
+            "name": "Aleannora"
+          },
+          {
+            "id": 8,
+            "name": "Peterbread"
+          },
+          {
+            "id": 1,
+            "name": "Lustletsgo"
+          }
+        ]
+      }
+    },
+    {
+      "identity": {
+        "group": "raidwc",
+        "id": "1",
+        "interval": {
+          "unit": "EntireFight",
+          "startUnit": 0,
+          "endUnit": 1,
+          "startTimestamp": 0,
+          "endTimestamp": 97058
+        }
+      },
+      "title": "Used 6 Virmen's Bite Potion of the Jade Serpent Combat or Mana Potions.",
+      "details": "Deego (Virmen's Bite), Gekkerless (Pre-Potion of the Jade Serpent), Peterbread (Pre-Virmen's Bite), Lustletsgo (Pre-Potion of the Jade Serpent), Onmyshaman (Pre-Potion of the Jade Serpent), Klesha (Pre-Potion of the Jade Serpent), Aleannora (0), Chilatte (0), Medys (0), Manaslu (0).",
+      "major": false,
+      "weight": 62.67297297297297,
+      "statistics": [
+        {
+          "name": "Total",
+          "value": 0.6,
+          "percentile": 1,
+          "unscaledValue": 6.0
+        },
+        {
+          "name": "Total Pre-Pots",
+          "value": 0.5,
+          "percentile": 17,
+          "unscaledValue": 5.0
+        }
+      ],
+      "aggregatedStatistics": [],
+      "statisticsForPlayers": [
+        {
+          "playerId": 10,
+          "statistics": [
+            {
+              "name": "Total",
+              "value": 0.0,
+              "percentile": 0,
+              "unscaledValue": 0.0
+            },
+            {
+              "name": "Total Pre-Pots",
+              "value": 0.0,
+              "percentile": 1,
+              "unscaledValue": 0.0
+            }
+          ]
+        }
+      ],
+      "values": {
+        "players": [
+          {
+            "id": 7,
+            "name": "Deego",
+            "frequency": 1
+          },
+          {
+            "id": 9,
+            "name": "Gekkerless",
+            "frequency": 1
+          },
+          {
+            "id": 8,
+            "name": "Peterbread",
+            "frequency": 1
+          },
+          {
+            "id": 1,
+            "name": "Lustletsgo",
+            "frequency": 1
+          },
+          {
+            "id": 3,
+            "name": "Onmyshaman",
+            "frequency": 1
+          },
+          {
+            "id": 6,
+            "name": "Klesha",
+            "frequency": 1
+          },
+          {
+            "id": 10,
+            "name": "Aleannora",
+            "frequency": 0
+          },
+          {
+            "id": 2,
+            "name": "Chilatte",
+            "frequency": 0
+          },
+          {
+            "id": 5,
+            "name": "Medys",
+            "frequency": 0
+          },
+          {
+            "id": 4,
+            "name": "Manaslu",
+            "frequency": 0
+          }
+        ]
+      }
+    },
+    {
+      "identity": {
+        "group": "raidwc",
+        "id": "0",
+        "interval": {
+          "unit": "EntireFight",
+          "startUnit": 0,
+          "endUnit": 1,
+          "startTimestamp": 0,
+          "endTimestamp": 97058
+        }
+      },
+      "title": "Healed with Healthstone Healthstone / Healing Potions Healing Potions 0 times.",
+      "details": null,
+      "major": false,
+      "weight": 57.310810810810814,
+      "statistics": [
+        {
+          "name": "Healing",
+          "value": 0.0,
+          "percentile": 23,
+          "unscaledValue": 0.0
+        },
+        {
+          "name": "Casts",
+          "value": 0.0,
+          "percentile": 23,
+          "unscaledValue": 0.0
+        }
+      ],
+      "aggregatedStatistics": [],
+      "statisticsForPlayers": [
+        {
+          "playerId": 10,
+          "statistics": [
+            {
+              "name": "Healing",
+              "value": 0.0,
+              "percentile": 23,
+              "unscaledValue": 0.0
+            },
+            {
+              "name": "Casts",
+              "value": 0.0,
+              "percentile": 23,
+              "unscaledValue": 0.0
+            }
+          ]
+        }
+      ],
+      "values": {}
+    },
+    {
+      "identity": {
+        "group": "1507",
+        "id": "2",
+        "interval": {
+          "unit": "EntireFight",
+          "startUnit": 0,
+          "endUnit": 1,
+          "startTimestamp": 0,
+          "endTimestamp": 97058
+        }
+      },
+      "title": "Took a total of 583k from Pheromones of Zeal Pheromones of Zeal, reduced by getting to a platform faster.",
+      "details": "",
+      "major": false,
+      "weight": 52.79459459459459,
+      "statistics": [
+        {
+          "name": "Hits",
+          "value": 1.607286364854005,
+          "percentile": 72,
+          "unscaledValue": 26.0
+        },
+        {
+          "name": "Damage",
+          "value": 36018.05106225144,
+          "percentile": 67,
+          "unscaledValue": 582640.0
+        }
+      ],
+      "aggregatedStatistics": [],
+      "statisticsForPlayers": [
+        {
+          "playerId": 10,
+          "statistics": [
+            {
+              "name": "Hits",
+              "value": 0.0,
+              "percentile": 100,
+              "unscaledValue": 0.0
+            },
+            {
+              "name": "Damage",
+              "value": 0.0,
+              "percentile": 100,
+              "unscaledValue": 0.0
+            }
+          ]
+        }
+      ],
+      "values": {
+        "totalHits": 26,
+        "totalDamage": 582640,
+        "timestamps": [
+          49925,
+          50206,
+          50916,
+          51197,
+          51936,
+          52215,
+          52923,
+          53185,
+          53317,
+          53858,
+          54301,
+          54876,
+          55304,
+          55849,
+          56308,
+          56853,
+          57312,
+          57887,
+          58847,
+          59868,
+          60875,
+          61881,
+          91992,
+          92864,
+          92979,
+          94016
+        ],
+        "players": [
+          {
+            "id": 7,
+            "guid": 99488003,
+            "name": "Deego",
+            "frequency": 9,
+            "damage": 26564.444444444445
+          },
+          {
+            "id": 4,
+            "guid": 99488014,
+            "name": "Manaslu",
+            "frequency": 5,
+            "damage": 29089
+          },
+          {
+            "id": 3,
+            "guid": 99394880,
+            "name": "Onmyshaman",
+            "frequency": 4,
+            "damage": 17284.25
+          },
+          {
+            "id": 2,
+            "guid": 99488076,
+            "name": "Chilatte",
+            "frequency": 4,
+            "damage": 7320
+          },
+          {
+            "id": 5,
+            "guid": 99487986,
+            "name": "Medys",
+            "frequency": 3,
+            "damage": 24717
+          },
+          {
+            "id": 9,
+            "guid": 99514049,
+            "name": "Gekkerless",
+            "frequency": 1,
+            "damage": 25547
+          }
+        ]
+      }
+    },
+    {
+      "identity": {
+        "group": "1507",
+        "id": "3",
+        "interval": {
+          "unit": "EntireFight",
+          "startUnit": 0,
+          "endUnit": 1,
+          "startTimestamp": 0,
+          "endTimestamp": 97058
+        }
+      },
+      "title": "Hit by Sonic Ring Sonic Ring 2 times, taking moderate damage.",
+      "details": "",
+      "major": false,
+      "weight": 57.44054054054054,
+      "statistics": [
+        {
+          "name": "Hits",
+          "value": 0.1,
+          "percentile": 100,
+          "unscaledValue": 2.0
+        },
+        {
+          "name": "Damage",
+          "value": 8110.7,
+          "percentile": 100,
+          "unscaledValue": 162214.0
+        }
+      ],
+      "aggregatedStatistics": [],
+      "statisticsForPlayers": [
+        {
+          "playerId": 10,
+          "statistics": [
+            {
+              "name": "Hits",
+              "value": 0.0,
+              "percentile": 100,
+              "unscaledValue": 0.0
+            },
+            {
+              "name": "Damage",
+              "value": 0.0,
+              "percentile": 100,
+              "unscaledValue": 0.0
+            }
+          ]
+        }
+      ],
+      "values": {
+        "totalHits": 2,
+        "totalDamage": 162214,
+        "timestamps": [
+          75592,
+          80899
+        ],
+        "players": [
+          {
+            "id": 4,
+            "guid": 99488014,
+            "name": "Manaslu",
+            "frequency": 1,
+            "damage": 27524
+          },
+          {
+            "id": 7,
+            "guid": 99488003,
+            "name": "Deego",
+            "frequency": 1,
+            "damage": 134690
+          }
+        ]
+      }
+    },
+    {
+      "identity": {
+        "group": "1507",
+        "id": "F",
+        "interval": {
+          "unit": "EntireFight",
+          "startUnit": 0,
+          "endUnit": 1,
+          "startTimestamp": 0,
+          "endTimestamp": 97058
+        }
+      },
+      "title": "Took a total of 6.2m damage from Imperial Vizier Zor'lok's Force and Verve Force and Verve, reduced by standing in a Noise Cancelling Noise Cancelling zone or using strong defensives.",
+      "details": "",
+      "major": false,
+      "weight": 54.11924119241193,
+      "statistics": [
+        {
+          "name": "Hits",
+          "value": 8.8,
+          "percentile": 19,
+          "unscaledValue": 176.0
+        },
+        {
+          "name": "Damage",
+          "value": 311961.75,
+          "percentile": 73,
+          "unscaledValue": 6239235.0
+        }
+      ],
+      "aggregatedStatistics": [],
+      "statisticsForPlayers": [],
+      "values": {
+        "totalHits": 176,
+        "totalDamage": 6239235,
+        "timestamps": [
+          33577,
+          33577,
+          33577,
+          33577,
+          33577,
+          33578,
+          33578,
+          33578,
+          34576,
+          34577,
+          34577,
+          34577,
+          34577,
+          34577,
+          34578,
+          34578,
+          35580,
+          35581,
+          35581,
+          35581,
+          35581,
+          35582,
+          35582,
+          35582,
+          36565,
+          36565,
+          36565,
+          36565,
+          36565,
+          36566,
+          36566,
+          36566,
+          37575,
+          37576,
+          37576,
+          37577,
+          37577,
+          37578,
+          37578,
+          37578,
+          38575,
+          38575,
+          38575,
+          38576,
+          38576,
+          38576,
+          38576,
+          38577,
+          39571,
+          39571,
+          39571,
+          39571,
+          39571,
+          39571,
+          39571,
+          39571,
+          40573,
+          40574,
+          40574,
+          40575,
+          40575,
+          40575,
+          40575,
+          40575,
+          41569,
+          41569,
+          41569,
+          41569,
+          41569,
+          41569,
+          41569,
+          41569,
+          42590,
+          42590,
+          42590,
+          42590,
+          42590,
+          42591,
+          42594,
+          42594,
+          43566,
+          43566,
+          43566,
+          43566,
+          43566,
+          43566,
+          43566,
+          43566,
+          64758,
+          64774,
+          64774,
+          64774,
+          64774,
+          64774,
+          64774,
+          64774,
+          65788,
+          65788,
+          65788,
+          65788,
+          65788,
+          65788,
+          65789,
+          65789,
+          66787,
+          66788,
+          66788,
+          66788,
+          66788,
+          66788,
+          66788,
+          66788,
+          67770,
+          67770,
+          67770,
+          67770,
+          67770,
+          67771,
+          67771,
+          67771,
+          68758,
+          68759,
+          68759,
+          68759,
+          68759,
+          68759,
+          68759,
+          68759,
+          69769,
+          69770,
+          69770,
+          69770,
+          69770,
+          69770,
+          69770,
+          69770,
+          70777,
+          70777,
+          70777,
+          70778,
+          70778,
+          70778,
+          70778,
+          70778,
+          71766,
+          71766,
+          71766,
+          71767,
+          71767,
+          71767,
+          71767,
+          71767,
+          72757,
+          72757,
+          72757,
+          72757,
+          72757,
+          72789,
+          72789,
+          72789,
+          73778,
+          73778,
+          73778,
+          73778,
+          73778,
+          73778,
+          73778,
+          73778,
+          74763,
+          74764,
+          74764,
+          74764,
+          74764,
+          74764,
+          74764,
+          74764
+        ],
+        "players": [
+          {
+            "id": 9,
+            "guid": 99514049,
+            "name": "Gekkerless",
+            "frequency": 22,
+            "damage": 807113
+          },
+          {
+            "id": 6,
+            "guid": 99488030,
+            "name": "Klesha",
+            "frequency": 22,
+            "damage": 586135
+          },
+          {
+            "id": 8,
+            "guid": 99488015,
+            "name": "Peterbread",
+            "frequency": 22,
+            "damage": 979326
+          },
+          {
+            "id": 4,
+            "guid": 99488014,
+            "name": "Manaslu",
+            "frequency": 22,
+            "damage": 595726
+          },
+          {
+            "id": 7,
+            "guid": 99488003,
+            "name": "Deego",
+            "frequency": 22,
+            "damage": 593176
+          },
+          {
+            "id": 1,
+            "guid": 99487913,
+            "name": "Lustletsgo",
+            "frequency": 22,
+            "damage": 933571
+          },
+          {
+            "id": 10,
+            "guid": 99487903,
+            "name": "Aleannora",
+            "frequency": 22,
+            "damage": 812343
+          },
+          {
+            "id": 3,
+            "guid": 99394880,
+            "name": "Onmyshaman",
+            "frequency": 22,
+            "damage": 931845
+          }
+        ]
+      }
+    }
+  ],
+  "playerEvidence": [
+    {
+      "insight": "raidwc:3",
+      "frequency": 1
+    },
+    {
+      "insight": "raidwc:6"
+    },
+    {
+      "insight": "raidwc:1",
+      "frequency": 0
+    },
+    {
+      "insight": "1507:F",
+      "frequency": 22,
+      "damage": 812343
+    }
+  ],
+  "source": {
+    "provider": "wipefest",
+    "snapshotId": 1,
+    "reportCode": "j8wDLpCTaqhB7M1x",
+    "fightId": "10",
+    "groupId": "1507"
+  },
+  "evaluation": {
+    "totalValue": 54.0,
+    "totalBonus": 1.0,
+    "fightDurationFractionUntilFirstDeath": 1.0
+  }
+}
