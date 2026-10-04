@@ -127,3 +127,42 @@ def test_dal72_revision_upgrades_and_downgrades_after_dal70():
         tables = set(inspect(connection).get_table_names())
         assert "coaching_sessions" not in tables and "coaching_session_messages" not in tables
         assert {"coaching_profiles", "coaching_profile_revisions"} <= tables
+
+
+def test_dal75_insight_columns_upgrade_persist_json_and_downgrade_to_dal72():
+    engine = create_engine("sqlite://")
+    versions = Path(__file__).parents[2] / "alembic/versions"
+    modules = []
+    for name, filename in (("dal46", "dal46_pull_coach_persistence.py"),
+                           ("dal68", "dal68_wipefest_snapshots.py"),
+                           ("dal70", "dal70_coaching_profiles.py"),
+                           ("dal72", "dal72_coaching_sessions.py"),
+                           ("dal75", "dal75_insight_gate.py")):
+        spec = importlib.util.spec_from_file_location(name, versions / filename)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        modules.append(module)
+
+    with engine.begin() as connection:
+        connection.exec_driver_sql("CREATE TABLE players (id INTEGER PRIMARY KEY)")
+        for module in modules:
+            run_revision(connection, module.upgrade)
+        expected = {"candidate_insights", "insight_gate_decisions", "displayed_insight_ids", "insight_provenance"}
+        assert expected <= {column["name"] for column in inspect(connection).get_columns("coaching_sessions")}
+        connection.exec_driver_sql("INSERT INTO wipefest_fight_snapshots "
+            "(provider, report_code, fight_id, group_id, request_url, request_params, fetched_at, payload, fingerprint) "
+            "VALUES ('wipefest', 'R1', 'F1', 'G1', 'https://example.test', '{}', CURRENT_TIMESTAMP, '{}', 'abc')")
+        connection.exec_driver_sql(
+            "INSERT INTO coaching_sessions "
+            "(snapshot_id, report_code, fight_id, encounter_id, audience, context_schema_version, "
+            "context_fingerprint, request_context, profile_revision_id, provider, requested_model, status, "
+            "candidate_insights, insight_gate_decisions, displayed_insight_ids, insight_provenance) "
+            "VALUES (1, 'R1', 'F1', 'boss', 'raid', 'v1', 'abc', '{}', 1, 'openrouter', 'model', 'completed', ?, ?, ?, ?)",
+            ('[{"id": "candidate-1"}]', '[{"surface": false}]', '[]', '{"gate": "threshold"}'))
+        stored = connection.exec_driver_sql("SELECT candidate_insights, insight_gate_decisions, "
+            "displayed_insight_ids, insight_provenance FROM coaching_sessions WHERE id = 1").one()
+        assert stored == ('[{"id": "candidate-1"}]', '[{"surface": false}]', '[]', '{"gate": "threshold"}')
+        run_revision(connection, modules[4].downgrade)
+        columns = {column["name"] for column in inspect(connection).get_columns("coaching_sessions")}
+        assert expected.isdisjoint(columns)
+        assert {"coaching_sessions", "coaching_session_messages", "coaching_profiles"} <= set(inspect(connection).get_table_names())

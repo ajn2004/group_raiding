@@ -68,6 +68,10 @@ class CoachingSession(Base):
     usage: Mapped[dict | None] = mapped_column(JSON)
     cost: Mapped[dict | None] = mapped_column(JSON)
     structured_response: Mapped[dict | None] = mapped_column(JSON)
+    candidate_insights: Mapped[list | None] = mapped_column(JSON)
+    insight_gate_decisions: Mapped[list | None] = mapped_column(JSON)
+    displayed_insight_ids: Mapped[list | None] = mapped_column(JSON)
+    insight_provenance: Mapped[dict | None] = mapped_column(JSON)
     raw_response: Mapped[dict | str | None] = mapped_column(JSON)
     error: Mapped[dict | None] = mapped_column(JSON)
     messages: Mapped[list["CoachingSessionMessage"]] = relationship(

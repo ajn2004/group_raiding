@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import create_engine, select
@@ -8,6 +9,8 @@ from app.db.models import Base
 from app.db.models.pull_coach import CoachingProfile, CoachingProfileRevision, CoachingSession, CoachingSessionMessage
 from app.db.models.wipefest import WipefestFightSnapshot
 from app.pull_coach.persistence.coaching_sessions import CoachingSessionRepository
+from app.pull_coach.coaching.finalization import finalize_coaching_response
+from app.pull_coach.coaching.insights import InsightGateConfig
 
 
 @pytest.fixture
@@ -111,3 +114,29 @@ def test_start_rejects_missing_profile_revision(seeded_session):
     with pytest.raises(LookupError, match="profile revision"):
         repo.start(snapshot_id=snapshot_id, encounter_id="boss-1", audience="raid",
             context_schema_version="context-v1", request_context={}, profile_revision_id=999)
+
+
+def test_finalization_persists_rejected_candidate_but_does_not_surface_it(seeded_session):
+    db, repo, snapshot_id, profile_id = seeded_session
+    context = {"insights": [{"identity": {"group": "g", "id": "one"}}]}
+    run = repo.start(snapshot_id=snapshot_id, encounter_id="boss-1", audience="raid",
+        context_schema_version="context-v1", request_context=context, profile_revision_id=profile_id)
+    response = {"recommendations": [{"scope": "raid", "text": "Unaccepted advice",
+        "source_insight_keys": ["g:one"], "kind": "observation", "confidence": 0.1}],
+        "candidate_source_insight_keys": []}
+    inference = SimpleNamespace(response=response, raw_response={"provider": "raw"},
+        provider_request_id="request-1", provider_response_id="response-1",
+        actual_model="vendor/model-actual", usage={"tokens": 3})
+
+    surfaced = finalize_coaching_response(inference_result=inference, context=context,
+        gate_config=InsightGateConfig(profile="threshold", threshold=0.5), session=run, sessions=repo)
+    db.flush()
+    inspected = repo.inspect(run.id)
+    assert len(run.candidate_insights) == 1
+    assert run.insight_gate_decisions[0]["surface"] is False
+    assert run.structured_response["recommendations"] == []
+    assert run.displayed_insight_ids == []
+    assert surfaced["recommendations"] == []
+    assert inspected["generator"] == {"profile_revision_id": profile_id, "provider": "openrouter",
+        "requested_model": "vendor/model-v1", "actual_model": "vendor/model-actual"}
+    assert inspected["gate"] == {"evaluator": "threshold", "version": "1"}

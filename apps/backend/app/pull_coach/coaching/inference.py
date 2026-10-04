@@ -98,7 +98,8 @@ RESPONSE_SCHEMA: dict[str, Any] = {
         "properties": {"scope": {"type": "string", "enum": ["raid", "player"]},
             "text": {"type": "string"}, "source_insight_keys": {"type": "array", "items": {"type": "string"}},
             "kind": {"type": "string", "enum": ["observation", "inference"]},
-            "player_id": {"type": ["string", "null"]}},
+            "player_id": {"type": ["string", "null"]},
+            "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}},
         "required": ["scope", "text", "source_insight_keys", "kind", "player_id"]}},
 }
 
@@ -126,7 +127,8 @@ def validate_coaching_response(value: Any, context: dict[str, Any], max_recommen
     player_ids = {str(p.get("playerId")) for p in players if isinstance(p, dict) and p.get("playerId") is not None}
     normalized = []
     for item in recommendations:
-        if not isinstance(item, dict) or set(item) != {"scope", "text", "source_insight_keys", "kind", "player_id"}:
+        required = {"scope", "text", "source_insight_keys", "kind", "player_id"}
+        if not isinstance(item, dict) or not required <= set(item) or set(item) - required - {"confidence"}:
             raise InvalidCoachingResponse("malformed recommendation")
         if item["scope"] not in {"raid", "player"} or item["kind"] not in {"observation", "inference"}:
             raise InvalidCoachingResponse("invalid recommendation scope or kind")
@@ -140,6 +142,10 @@ def validate_coaching_response(value: Any, context: dict[str, Any], max_recommen
             raise InvalidCoachingResponse("recommendation references an unknown player")
         if item["scope"] == "player" and player_id is None:
             raise InvalidCoachingResponse("player recommendation must identify a player")
+        confidence = item.get("confidence")
+        if confidence is not None and (not isinstance(confidence, (int, float)) or isinstance(confidence, bool)
+                                       or not 0 <= confidence <= 1):
+            raise InvalidCoachingResponse("recommendation confidence must be between 0 and 1")
         normalized.append({**item, "text": item["text"].strip()})
     if any(key not in valid_keys for key in candidates):
         raise InvalidCoachingResponse("candidate insight references an unknown insight")

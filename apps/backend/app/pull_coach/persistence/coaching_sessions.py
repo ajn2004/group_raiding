@@ -71,12 +71,20 @@ class CoachingSessionRepository:
                  raw_response: dict | str, provider_request_id: str | None = None,
                  actual_model: str | None = None,
                  provider_response_id: str | None = None, usage: dict | None = None,
-                 cost: dict | None = None, assistant_content: str | None = None) -> CoachingSession:
+                 cost: dict | None = None, assistant_content: str | None = None,
+                 insight_pipeline: dict | None = None) -> CoachingSession:
         if session.status != "pending":
             raise ValueError("only pending coaching sessions can be completed")
         session.status = "completed"
         session.completed_at = datetime.now(timezone.utc)
         session.structured_response = structured_response
+        if insight_pipeline is not None:
+            # Keep both rejected and accepted candidates for audit; render only this allowlisted subset.
+            session.candidate_insights = insight_pipeline["candidates"]
+            session.insight_gate_decisions = insight_pipeline["decisions"]
+            session.displayed_insight_ids = insight_pipeline["displayed_ids"]
+            session.insight_provenance = {key: insight_pipeline[key] for key in
+                ("generator", "gate", "gate_version", "failure_policy")}
         session.raw_response = raw_response
         session.provider_request_id = provider_request_id
         session.actual_model = actual_model
@@ -107,3 +115,18 @@ class CoachingSessionRepository:
         session.cost = cost
         self.session.flush()
         return session
+
+    def inspect(self, session_id: int) -> dict | None:
+        """Return session outputs and generator/gate audit provenance for operator inspection."""
+        row = self.session.get(CoachingSession, session_id)
+        if row is None:
+            return None
+        return {"id": row.id, "status": row.status, "structured_response": row.structured_response,
+                "candidate_insights": row.candidate_insights or [],
+                "insight_gate_decisions": row.insight_gate_decisions or [],
+                "displayed_insight_ids": row.displayed_insight_ids or [],
+                "insight_provenance": row.insight_provenance or {},
+                "generator": {"profile_revision_id": row.profile_revision_id, "provider": row.provider,
+                              "requested_model": row.requested_model, "actual_model": row.actual_model},
+                "gate": {"evaluator": (row.insight_provenance or {}).get("gate"),
+                         "version": (row.insight_provenance or {}).get("gate_version")}}
