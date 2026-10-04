@@ -17,3 +17,4 @@ from .pull_coach import (
     PullCoachPull,
     PullCoachReport,
 )
+from .wipefest import WipefestFightSnapshot
