@@ -10,6 +10,7 @@ import requests
 from app.config import WCL_CLIENT_ID, WCL_CLIENT_SECRET
 from app.pull_coach.models import (Actor, EncounterIdentity, EventType, NormalizedEvent,
     PullIdentity, PullState, RaidReportIdentity, Role, SourceIdentity)
+from app.pull_coach.identity import fight_sort_key, normalize_encounter_id
 from .errors import (AuthenticationError, InvalidReportReference, MalformedResponse,
     PaginationError, RateLimitError, ReportUnavailable, TransportError)
 from .snapshot import WCLSnapshot
@@ -230,12 +231,13 @@ class WCLClient:
                 class_name=a.get("subType") if a.get("type") == "Player" else None,
                 source=SourceIdentity("warcraftlogs", str(a["id"]))) for a in actors_raw)
             actor_ids = {str(a["id"]): f"wcl:{a['id']}" for a in actors_raw}
-            encounter_id = str(fight.get("encounterID") or fight["id"])
+            encounter_id = normalize_encounter_id(fight.get("encounterID")) or str(fight["id"])
             encounter = EncounterIdentity(encounter_id, fight.get("name") or "Unknown encounter")
             state = PullState.IN_PROGRESS if fight.get("inProgress") else PullState.KILL if fight.get("kill") else PullState.WIPE
             pull = PullIdentity(RaidReportIdentity(SourceIdentity("warcraftlogs", code), code), encounter,
-                str(fight["id"]), sum(1 for f in fights if f["startTime"] <= fight["startTime"] and
-                    str(f.get("encounterID")) == str(fight.get("encounterID"))), fight["startTime"],
+                str(fight["id"]), 1 + sum(1 for f in fights if
+                    (normalize_encounter_id(f.get("encounterID")) or str(f["id"])) == encounter_id and
+                    fight_sort_key(f) < fight_sort_key(fight)), fight["startTime"],
                 fight.get("endTime"), state, fight.get("bossPercentage"))
         except (KeyError, TypeError, ValueError) as exc:
             raise MalformedResponse(f"malformed fight or actor metadata for report {code}") from exc

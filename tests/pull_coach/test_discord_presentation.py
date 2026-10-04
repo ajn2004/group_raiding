@@ -57,6 +57,29 @@ def test_replay_stage_uses_same_presenter_payload():
     assert live == replay
 
 
+def test_historical_context_is_explicit_and_target_link_is_preserved():
+    from app.pull_coach.workflow import HistoricalSampleContext
+    result = report_result()
+    object.__setattr__(result, "historical_context", HistoricalSampleContext(3))
+    payload = PullCoachPresenter().present(result)
+    assert payload.embed.title.startswith("Historical Pull Coach")
+    assert "3 completed pulls analyzed" in payload.embed.description
+    assert "Target: Pull 12 · Fight 42" in payload.embed.description
+    assert "Wipe · 31.4% remaining" in payload.embed.description
+    assert payload.embed.url.endswith("fight=42")
+
+
+def test_historical_kill_includes_target_boss_percentage_when_available():
+    from app.pull_coach.workflow import HistoricalSampleContext
+    result = report_result()
+    object.__setattr__(result, "selected_pull", SimpleNamespace(**{**vars(result.selected_pull),
+                                                                     "state": PullState.KILL,
+                                                                     "boss_percent": 0.01}))
+    object.__setattr__(result, "historical_context", HistoricalSampleContext(3))
+    payload = PullCoachPresenter().present(result)
+    assert "Target: Pull 12 · Fight 42 · Kill · Boss 0.01%" in payload.embed.description
+
+
 def test_pathological_payload_obeys_discord_limits_and_keeps_primary_failure():
     result = report_result()
     result.selected_pull.encounter.name = "Encounter " + "X" * 6500

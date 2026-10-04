@@ -3,7 +3,8 @@ from types import SimpleNamespace
 import pytest
 
 from app.pull_coach.workflow import (
-    FightNotCompleted, FightNotFound, NoCompletedPulls, PullCoachWorkflow, source_report_url,
+    FightNotCompleted, FightNotFound, NoCompletedPulls, PullCoachWorkflow, UnsupportedEncounter,
+    source_report_url,
 )
 
 
@@ -79,6 +80,75 @@ def test_explicit_unknown_and_in_progress_fight_errors():
         workflow.run("ABC123", "99")
     with pytest.raises(FightNotCompleted):
         workflow.run("ABC123", "4")
+
+
+def test_historical_sample_only_ingests_completed_selected_encounter_in_shared_chronology():
+    data = [
+        {"id": 8, "encounterID": 42, "name": "Boss", "startTime": 30, "endTime": 40},
+        {"id": 2, "encounterID": 9, "name": "Other", "startTime": 5, "endTime": 15},
+        {"id": 3, "encounterID": "042", "name": "Boss", "startTime": 10, "endTime": 20},
+        {"id": 4, "encounterID": 0, "name": "Trash", "startTime": 15, "endTime": 25},
+        {"id": 5, "encounterID": 42, "name": "Boss", "startTime": 40, "endTime": None, "inProgress": True},
+    ]
+    workflow, wcl = make(data)
+    result = workflow.run_encounter_sample("ABC123", "042")
+    assert wcl.ingested == ["3", "8"]
+    assert result.selected_pull.fight_id == "8"
+    assert result.historical_context.completed_pull_count == 2
+    assert result.source_url.endswith("fight=8")
+
+
+def test_historical_sample_checks_mechanics_before_ingestion():
+    workflow, wcl = make(fights())
+    workflow.analyzer.registry = SimpleNamespace(for_encounter=lambda encounter: ())
+    with pytest.raises(UnsupportedEncounter, match="mechanic"):
+        workflow.run_encounter_sample("ABC123", "42")
+    assert not wcl.ingested
+
+
+def test_historical_ties_use_fight_id_and_empty_encounter_is_expected_error():
+    workflow, wcl = make([
+        {"id": 9, "encounterID": 42, "name": "Boss", "startTime": 1, "endTime": 2},
+        {"id": 3, "encounterID": 42, "name": "Boss", "startTime": 1, "endTime": 2},
+    ])
+    result = workflow.run_encounter_sample("ABC123", 42)
+    assert wcl.ingested == ["3", "9"]
+    assert result.selected_pull.fight_id == "9"
+    with pytest.raises(NoCompletedPulls):
+        workflow.run_encounter_sample("ABC123", 999)
+
+
+def test_mixed_wcl_encounter_id_representations_survive_catalog_ingestion_and_progression():
+    from app.pull_coach.history import EncounterCatalogDiscovery
+    from app.pull_coach.models import AnalysisMetadata, PullAnalysis, SummaryMetrics
+    from app.pull_coach.progression import ProgressionComparator
+    from app.web_requests.warcraft_logs import WCLClient, WCLConfig
+
+    report = {"fights": [
+        {"id": 3, "encounterID": "042", "name": "Boss", "startTime": 10, "endTime": 20},
+        {"id": 8, "encounterID": 42, "name": "Boss", "startTime": 30, "endTime": 40},
+    ], "masterData": {"actors": [], "abilities": []}}
+    class Transport:
+        def graphql(self, query, variables):
+            return {"data": {"reportData": {"report": report}}}
+        def events(self, code, start, end):
+            return [{"data": [], "nextPageTimestamp": None}]
+    client = WCLClient(WCLConfig(), transport=Transport())
+    catalog = EncounterCatalogDiscovery(client).discover("ABC123")
+    assert catalog.encounters[0].encounter_id == "42"
+
+    class Analyzer:
+        registry = SimpleNamespace(for_encounter=lambda encounter: (SimpleNamespace(mechanic_id="m", name="M"),))
+        def analyze(self, pull, actors, events):
+            return PullAnalysis(pull, (), (), SummaryMetrics(), AnalysisMetadata("test", "1"))
+    class Coach:
+        def synthesize(self, *args):
+            return SimpleNamespace()
+    workflow = PullCoachWorkflow(client, Analyzer(), ProgressionComparator(), Coach())
+    result = workflow.run_encounter_sample("ABC123", catalog.encounters[0].encounter_id)
+    assert result.analysis.pull.encounter.encounter_id == "42"
+    assert result.progression.compared_pull_numbers == (1, 2)
+    assert result.selected_pull.fight_id == "8"
 
 
 def test_latest_without_completed_encounter_fight_errors():

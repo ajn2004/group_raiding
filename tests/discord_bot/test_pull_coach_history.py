@@ -162,6 +162,56 @@ def test_supported_selection_acknowledges_before_handoff_and_passes_interaction_
     assert len(received) == 1
 
 
+def test_default_handoff_runs_workflow_in_thread_and_posts_report_publicly(monkeypatch):
+    calls = []
+    payload = SimpleNamespace(details="finding · evidence: ev-1", embed=SimpleNamespace(
+        title="Historical Pull Coach — Boss", description="3 completed pulls", url="https://wcl/fight=3",
+        fields=(), footer="Pull Coach"))
+    class Workflow:
+        def run_encounter_sample(self, reference, encounter_id):
+            calls.append(("workflow", reference, encounter_id))
+            return object()
+    class Presenter:
+        def present(self, result):
+            calls.append(("present",))
+            return payload
+    class Channel:
+        async def send(self, **kwargs):
+            calls.append(("public", kwargs))
+    interaction = Interaction(values=["42"])
+    interaction.channel = Channel()
+    async def to_thread(fn, *args):
+        calls.append(("thread",))
+        return fn(*args)
+    monkeypatch.setattr(module.asyncio, "to_thread", to_thread)
+    cog = PullCoach(None, workflow_factory=Workflow, presenter=Presenter())
+    view = make_view(catalog([encounter(42)]), 7, cog.selection_handler)
+    asyncio.run(view._select(interaction))
+    assert calls[0] == ("thread",)
+    assert calls[1] == ("workflow", "https://www.warcraftlogs.com/reports/REPORT", "42")
+    public = next(item[1] for item in calls if item[0] == "public")
+    assert public["embed"].title.startswith("Historical Pull Coach")
+    assert isinstance(public["view"], module.PullCoachDetailsView)
+    assert public["view"].details == payload.details
+    assert sum(item[0] == "public" for item in calls) == 1
+
+
+def test_default_handoff_sanitizes_expected_failure_without_public_post(monkeypatch):
+    class Workflow:
+        def run_encounter_sample(self, reference, encounter_id):
+            raise module.UnsupportedEncounter("secret details")
+    async def to_thread(fn, *args):
+        return fn(*args)
+    monkeypatch.setattr(module.asyncio, "to_thread", to_thread)
+    interaction = Interaction(values=["42"])
+    interaction.channel = SimpleNamespace(send=lambda **kwargs: asyncio.sleep(0))
+    cog = PullCoach(None, workflow_factory=Workflow)
+    view = make_view(catalog([encounter(42)]), 7, cog.selection_handler)
+    asyncio.run(view._select(interaction))
+    assert any("doesn't have mechanic definitions" in message for message, _ in interaction.sent if isinstance(message, str))
+    assert not any("Selected Boss" in message for message, _ in interaction.sent if isinstance(message, str))
+
+
 def test_direct_outsider_selection_cannot_reach_handoff():
     called = []
     view = make_view(catalog([encounter(42)]), 7, lambda selection, interaction: called.append(selection))
