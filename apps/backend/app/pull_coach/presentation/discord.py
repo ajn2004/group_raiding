@@ -72,16 +72,24 @@ def _present_coaching_run(result):
     """Small source-neutral presentation until the richer coaching UI lands."""
     response = result.coaching if isinstance(result.coaching, dict) else {}
     recommendations = response.get("recommendations", [])
-    lines = [str(item.get("text", "")).strip() for item in recommendations
+    lines = [str(item.get("text", "")).strip() for item in recommendations[:3]
              if isinstance(item, dict) and str(item.get("text", "")).strip()]
     fields = ()
     if lines:
         fields = (DiscordEmbedField("Coaching recommendations",
                                     _clip("\n".join(f"• {line}" for line in lines), 1024)),)
-    description = f"{result.encounter_name} · Fight {result.fight_id} · {result.source.title()} source"
+    identity = response.get("_character")
+    description = (f"{identity} · " if identity else "") + f"{result.encounter_name} · Fight {result.fight_id}"
+    details = []
+    for item in recommendations:
+        if isinstance(item, dict):
+            keys = item.get("source_insight_keys", [])
+            if keys:
+                details.append(f"{item.get('text', '')}: {', '.join(map(str, keys))}")
+    details.append(f"Session: {result.session_id}" if result.session_id is not None else "Session unavailable")
     return DiscordMessagePayload(DiscordEmbedPayload(
         _clip(f"Pull Coach — {result.encounter_name}", 256), _clip(description, 4096),
-        result.source_url, fields), "\n".join(lines) or "No coaching recommendations.")
+        result.source_url, fields), _clip("\n".join(details), 1800) or "No coaching recommendations.")
 
 
 def _details(result):

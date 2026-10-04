@@ -87,6 +87,42 @@ def test_slash_command_converts_expected_failure_to_friendly_response(monkeypatc
     assert sent == ["That report has no completed boss pulls to analyze."]
 
 
+def test_individual_command_runs_player_coaching_and_is_ephemeral(monkeypatch):
+    calls, sent = [], []
+    result = SimpleNamespace(report_code="R", fight_id="7", encounter_id="42",
+        encounter_name="Boss", source_url="https://wcl/R?fight=7",
+        coaching={"recommendations": [{"text": "Use defensive", "source_insight_keys": ["g:i"]}]},
+        session_id=19, source="wipefest")
+
+    class Service:
+        def run_player(self, report, fight, character):
+            calls.append((report, fight, character))
+            return result
+
+    class Followup:
+        async def send(self, **kwargs):
+            sent.append(kwargs)
+
+    class Context:
+        followup = Followup()
+        async def defer(self, **kwargs):
+            sent.append(kwargs)
+
+    async def to_thread(fn, *args):
+        return fn(*args)
+
+    monkeypatch.setattr(command_module.asyncio, "to_thread", to_thread)
+    monkeypatch.setattr(command_module, "to_discord_embed", lambda payload: payload)
+    cog = PullCoach(None, workflow_factory=Service)
+    asyncio.run(PullCoach.how_did_i_do.callback(cog, Context(), "R", "7", "Mage"))
+    assert calls == [("R", "7", "Mage")]
+    assert sent[0] == {"ephemeral": True}
+    assert sent[1]["ephemeral"] is True
+    assert "Mage" in sent[1]["embed"].embed.description
+    assert "g:i" in sent[1]["view"].details
+    assert "19" in sent[1]["view"].details
+
+
 def test_command_boundary_maps_failures_without_leaking_exception_text(monkeypatch):
     cases = [
         (command_module.InvalidReportReference("secret-token invalid URL"), "supported Warcraft Logs"),

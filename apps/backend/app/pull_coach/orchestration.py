@@ -19,6 +19,7 @@ class SourceMode(str, Enum):
 
 class CoachingSource(Protocol):
     def coach(self, report_reference: str, fight: dict[str, Any]) -> "CoachingRunResult": ...
+    def coach_player(self, report_reference: str, fight: dict[str, Any], character: str) -> "CoachingRunResult": ...
 
 
 @dataclass(frozen=True)
@@ -62,3 +63,11 @@ class CoachingOrchestrator:
             if not self.selection.legacy_fallback:
                 raise
         return self.legacy.coach(report_reference, fight)
+
+    def coach_player(self, report_reference: str, fight: dict[str, Any], character: str) -> CoachingRunResult:
+        if self.selection.mode is SourceMode.LEGACY_ONLY:
+            raise CoachingSourceError("individual Wipefest coaching is unavailable in legacy mode")
+        method = getattr(self.wipefest, "coach_player", None)
+        if method is None:
+            raise CoachingSourceError("individual coaching is not configured")
+        return method(report_reference, fight, character)

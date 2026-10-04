@@ -23,6 +23,24 @@ class CoachingSessionRepository:
     def __init__(self, session: Session):
         self.session = session
 
+    def completed_for(self, *, snapshot_id: int, audience: str,
+                      target_player_id: str | None = None, profile_revision_id: int | None = None,
+                      context_fingerprint: str | None = None,
+                      gate_fingerprint: str | None = None) -> CoachingSession | None:
+        """Return the newest successful matching run for cached presentation."""
+        query = select(CoachingSession).where(CoachingSession.snapshot_id == snapshot_id,
+            CoachingSession.audience == audience, CoachingSession.status == "completed")
+        if audience == "player":
+            query = query.where(CoachingSession.target_player_id == target_player_id)
+        if profile_revision_id is not None:
+            query = query.where(CoachingSession.profile_revision_id == profile_revision_id)
+        if context_fingerprint is not None:
+            query = query.where(CoachingSession.context_fingerprint == context_fingerprint)
+        if gate_fingerprint is not None:
+            query = query.where(CoachingSession.insight_provenance["gate_fingerprint"].as_string() == gate_fingerprint)
+        return self.session.scalar(query.order_by(CoachingSession.completed_at.desc(),
+            CoachingSession.id.desc()).limit(1))
+
     def start(self, *, snapshot_id: int, encounter_id: str,
               audience: str, context_schema_version: str, request_context: dict,
               profile_revision_id: int,
@@ -84,7 +102,7 @@ class CoachingSessionRepository:
             session.insight_gate_decisions = insight_pipeline["decisions"]
             session.displayed_insight_ids = insight_pipeline["displayed_ids"]
             session.insight_provenance = {key: insight_pipeline[key] for key in
-                ("generator", "gate", "gate_version", "failure_policy")}
+                ("generator", "gate", "gate_version", "failure_policy", "gate_fingerprint")}
         session.raw_response = raw_response
         session.provider_request_id = provider_request_id
         session.actual_model = actual_model
