@@ -66,6 +66,14 @@ app/
   pull_coach/          Pull Coach domain and analysis system
 ```
 
+Runtime durable relational state belongs in the primary PostgreSQL database and
+is schema-managed through Alembic. SQLite is permitted only for isolated tests
+unless an explicit architecture ticket says otherwise. New persistent features
+must use the shared database boundary and caller-owned sessions, register models
+with the shared `Base`, add migrations to the single Alembic chain, never create
+private durable tables at service startup, and avoid feature-specific database
+configuration.
+
 The Pull Coach architecture should maintain clear boundaries:
 
 ```text

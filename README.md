@@ -90,9 +90,19 @@ from the browser. Required backend settings are in `apps/backend/.env.example`:
 - `SQLALCHEMY_DATABASE_USER`, `SQLALCHEMY_DATABASE_PASSWORD`,
   `SQLALCHEMY_DATABASE_HOST`, `SQLALCHEMY_DATABASE_PORT`, and
   `SQLALCHEMY_DATABASE_DB`: PostgreSQL connection settings shared with the
-  application. Auth identities, sessions, and one-use OAuth state are stored
-  there; the old development SQLite sessions are disposable and users must sign
-  in again after upgrading.
+  primary backend PostgreSQL database. Auth identities, sessions, and one-use
+  OAuth state are stored there; the old development SQLite sessions are
+  disposable and users must sign in again after upgrading.
+
+Runtime durable relational state belongs in the primary PostgreSQL database and
+is schema-managed through Alembic. SQLite is permitted only for isolated tests
+unless an explicit architecture ticket says otherwise. New persistent features
+must use the shared database boundary and caller-owned sessions, register models
+with the shared `Base`, add migrations to the single Alembic chain, never create
+private durable tables at service startup, and avoid feature-specific database
+configuration. Apply `uv run alembic upgrade head` before using database-backed
+authentication or other persistent features. `/api/healthz`, API imports, and
+OpenAPI generation do not require PostgreSQL.
 
 Register `http://localhost:3000/api/auth/discord/callback` as the redirect URI
 in the Discord Developer Portal for local use. For production, register the
@@ -165,8 +175,8 @@ checks the real browser-to-Python `/api/healthz` request through the same-origin
 rewrite. It needs no external services. Install its browser once with
 `pnpm --filter @group-raiding/web exec playwright install chromium`.
 
-The legacy bot uses `DISCORD_BOT_TOKEN` and the `SQLALCHEMY_DATABASE_*` values
-for database-backed features. Pull Coach's offline demo does not need Discord,
+The bot uses `DISCORD_BOT_TOKEN`; all database-backed features use the same
+`SQLALCHEMY_DATABASE_*` primary PostgreSQL settings. Pull Coach's offline demo does not need Discord,
 database, Warcraft Logs, or model-provider credentials.
 
 ## Pull Coach V0

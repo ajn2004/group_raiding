@@ -2,12 +2,9 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.config import USERNAME, PASSWORD, DB_SERVER, DB_NAME
+from app.config import database_url
 
-# Dev SQLite engine
-# Engine = create_engine(f"sqlite:///../sqlite.db")
-# Production Postgres engine
-Engine = create_engine(f"postgresql://{USERNAME}:{PASSWORD}@{DB_SERVER}/{DB_NAME}")
+Engine = create_engine(database_url())
 
 Session = sessionmaker(bind=Engine)
 
@@ -22,4 +19,3 @@ def session_scope():
         raise
     finally:
         session.close()
-
