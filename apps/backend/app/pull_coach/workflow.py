@@ -24,6 +24,12 @@ class UnsupportedEncounter(PullCoachWorkflowError): pass
 class PullCoachConfigurationError(PullCoachWorkflowError): pass
 
 
+def is_completed_boss_fight(fight) -> bool:
+    """Shared eligibility rule for selecting completed WCL boss pulls."""
+    return (_is_boss(fight) and fight.get("inProgress") is not True
+            and fight.get("endTime") is not None)
+
+
 @dataclass(frozen=True)
 class PullCoachReportResult:
     report_code: str
@@ -69,7 +75,7 @@ class PullCoachWorkflow:
         fights = report.get("fights", [])
         selector = str(fight_selector).strip().lower()
         if selector == "latest":
-            eligible = [f for f in fights if _is_boss(f) and not f.get("inProgress") and f.get("endTime") is not None]
+            eligible = [f for f in fights if is_completed_boss_fight(f)]
             if not eligible:
                 raise NoCompletedPulls("report has no completed boss encounter fights")
             target = max(eligible, key=fight_sort_key)
@@ -81,13 +87,13 @@ class PullCoachWorkflow:
                 raise FightNotFound(f"fight {selector} was not found")
             if not _is_boss(target):
                 raise UnsupportedEncounter(f"fight {selector} is not a boss encounter")
-            if target.get("inProgress") or target.get("endTime") is None:
+            if not is_completed_boss_fight(target):
                 raise FightNotCompleted(f"fight {selector} is still in progress")
 
         encounter_id = normalize_encounter_id(target.get("encounterID"))
         target_key = fight_sort_key(target)
         prefix = sorted((f for f in fights if normalize_encounter_id(f.get("encounterID")) == encounter_id
-                         and _is_boss(f) and not f.get("inProgress") and f.get("endTime") is not None
+                         and is_completed_boss_fight(f)
                          and fight_sort_key(f) <= target_key), key=fight_sort_key)
         registry = getattr(self.analyzer, "registry", None)
         definitions = registry.for_encounter(_encounter(target)) if registry is not None else ()
@@ -103,7 +109,7 @@ class PullCoachWorkflow:
             raise NoCompletedPulls("invalid encounter ID")
         fights = report.get("fights", [])
         selected = [f for f in fights if normalize_encounter_id(f.get("encounterID")) == requested
-                    and _is_boss(f) and f.get("inProgress") is not True and f.get("endTime") is not None]
+                    and is_completed_boss_fight(f)]
         if not selected:
             raise NoCompletedPulls("selected encounter has no completed pulls")
         selected.sort(key=fight_sort_key)

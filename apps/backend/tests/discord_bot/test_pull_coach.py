@@ -114,13 +114,19 @@ def test_individual_command_runs_player_coaching_and_is_ephemeral(monkeypatch):
     monkeypatch.setattr(command_module.asyncio, "to_thread", to_thread)
     monkeypatch.setattr(command_module, "to_discord_embed", lambda payload: payload)
     cog = PullCoach(None, workflow_factory=Service)
-    asyncio.run(PullCoach.how_did_i_do.callback(cog, Context(), "R", "7", "Mage"))
+    asyncio.run(PullCoach.how_did_i_do.callback(cog, Context(), "R", "Mage", "7"))
     assert calls == [("R", "7", "Mage")]
     assert sent[0] == {"ephemeral": True}
     assert sent[1]["ephemeral"] is True
     assert "Mage" in sent[1]["embed"].embed.description
     assert "g:i" in sent[1]["view"].details
     assert "19" in sent[1]["view"].details
+
+
+def test_individual_slash_command_registers_required_options_before_optional():
+    command = PullCoach.how_did_i_do
+    option_names = [option.name for option in command.options if option.name != "ctx"]
+    assert option_names == ["report", "character", "fight"]
 
 
 def test_command_boundary_maps_failures_without_leaking_exception_text(monkeypatch):
