@@ -46,6 +46,29 @@ with `cd apps/backend && uv run python main.py` and start the web client with `p
 separate terminal. The web client will call the backend through its HTTP API;
 running the browser app does not implicitly start the Discord bot or API.
 
+### HTTP API development
+
+The FastAPI service runs independently of the Discord bot. Start it from the
+repository root; once the Next.js app is available, start the web app in another
+terminal:
+
+```bash
+pnpm backend:api
+pnpm web:dev
+```
+
+The health endpoint is `GET /api/healthz`; interactive docs are at
+`/api/docs`. Export the reproducible OpenAPI contract from the repository root with:
+
+```bash
+pnpm backend:openapi
+```
+
+The generated document belongs in
+`apps/web/src/lib/api/generated/openapi.json`. Derived TypeScript API types
+should live alongside it in `apps/web/src/lib/api/generated/` and be generated
+from this contract rather than duplicating backend response definitions.
+
 The legacy bot uses `DISCORD_BOT_TOKEN` and the `SQLALCHEMY_DATABASE_*` values
 for database-backed features. Pull Coach's offline demo does not need Discord,
 database, Warcraft Logs, or model-provider credentials.
