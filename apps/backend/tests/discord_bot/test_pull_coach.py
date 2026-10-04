@@ -61,6 +61,97 @@ def test_slash_command_defers_then_offloads_workflow_and_sends_payload(monkeypat
     assert order[3][1]["embed"].embed.url.endswith("fight=42")
 
 
+def test_omitted_fight_opens_picker_and_coaches_only_after_selection(monkeypatch):
+    calls, sent = [], []
+    result = report_result()
+
+    class Workflow:
+        def list_completed_fights(self, report):
+            calls.append(("list", report))
+            return (SimpleNamespace(fight_id="14", encounter_name="Imperial Vizier Zor'lok", is_kill=False,
+                                    boss_percentage=70.0),)
+
+        def run(self, report, fight):
+            calls.append(("run", report, fight))
+            return result
+
+    class Followup:
+        async def send(self, *args, **kwargs):
+            sent.append((args, kwargs))
+            return SimpleNamespace()
+
+    class Context:
+        author = SimpleNamespace(id=123)
+        followup = Followup()
+
+        async def defer(self):
+            calls.append(("defer",))
+
+    async def to_thread(fn, *args):
+        return fn(*args)
+
+    monkeypatch.setattr(command_module.asyncio, "to_thread", to_thread)
+    monkeypatch.setattr(command_module, "to_discord_embed", lambda payload: payload)
+    cog = PullCoach(None, workflow_factory=Workflow)
+    asyncio.run(PullCoach.pullcoach.callback(cog, Context(), "ABC123", None))
+    assert calls == [("defer",), ("list", "ABC123")]
+    assert "Choose a completed boss fight" in sent[0][0][0]
+    picker = sent[0][1]["view"]
+    assert picker.owner_id == 123
+    option = picker.children[0].options[0]
+    assert "Fight 14" in option.label and "Imperial Vizier Zor'lok" in option.label
+
+    async def select():
+        class Response:
+            async def edit_message(self, **kwargs):
+                calls.append(("ack", kwargs))
+
+        class Interaction:
+            user = SimpleNamespace(id=123)
+            data = {"values": ["14"]}
+            response = Response()
+
+            class Followup:
+                async def send(self, **kwargs):
+                    sent.append(((), kwargs))
+
+            followup = Followup()
+
+        await picker._select(Interaction())
+
+    asyncio.run(select())
+    assert calls[2][0] == "ack"
+    assert calls[3] == ("run", "ABC123", "14")
+    assert sent[-1][1]["embed"].embed.url.endswith("fight=42")
+    assert sent[-1][1].get("ephemeral") is not True
+
+
+def test_explicit_numeric_fight_bypasses_picker(monkeypatch):
+    calls = []
+
+    class Workflow:
+        def run(self, report, fight):
+            calls.append((report, fight))
+            return report_result()
+
+    class Followup:
+        async def send(self, **kwargs):
+            pass
+
+    class Context:
+        followup = Followup()
+        async def defer(self):
+            pass
+
+    async def to_thread(fn, *args):
+        return fn(*args)
+
+    monkeypatch.setattr(command_module.asyncio, "to_thread", to_thread)
+    monkeypatch.setattr(command_module, "to_discord_embed", lambda payload: payload)
+    asyncio.run(PullCoach.pullcoach.callback(PullCoach(None, workflow_factory=Workflow), Context(), "R", "14"))
+    assert calls == [("R", "14")]
+
+
 def test_slash_command_converts_expected_failure_to_friendly_response(monkeypatch):
     class Workflow:
         def run(self, report, fight):
