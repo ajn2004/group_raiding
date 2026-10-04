@@ -2,6 +2,17 @@
 import re
 
 
+def canonical_ability_id(value: int | str) -> str:
+    """Return a stable string identity for numeric and opaque ability IDs."""
+    if type(value) is int:
+        return str(value)
+    if isinstance(value, str) and value.strip():
+        if re.fullmatch(r"[0-9]+", value):
+            return str(int(value))
+        return value
+    raise ValueError("ability ID must be a non-empty integer or string")
+
+
 def normalize_encounter_id(value):
     """Return a canonical positive encounter ID, or None for malformed IDs."""
     if isinstance(value, bool):
