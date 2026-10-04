@@ -6,6 +6,21 @@ from typing import Any, Mapping
 from app.pull_coach.models import (
     EncounterIdentity, EventType, EvidenceReference, MechanicDefinition, NormalizedEvent,
 )
+from app.pull_coach.identity import canonical_ability_id
+
+
+def _ability_matches(selectors, ability_id):
+    if ability_id is None:
+        return False
+    try:
+        observed = canonical_ability_id(ability_id)
+        return any(canonical_ability_id(selector) == observed for selector in selectors)
+    except ValueError:
+        return False
+
+
+def _canonical_selector_set(values):
+    return tuple(sorted({canonical_ability_id(value) for value in values}))
 
 
 @dataclass(frozen=True)
@@ -53,8 +68,8 @@ class MechanicRegistry:
             identities.add(identity)
             selector = (
                 rule.definition.encounter.encounter_id, rule.event_types,
-                tuple(sorted(set(rule.definition.ability_ids))),
-                tuple(sorted(set(rule.stopped_ability_ids))),
+                _canonical_selector_set(rule.definition.ability_ids),
+                _canonical_selector_set(rule.stopped_ability_ids),
                 rule.stopped_ability_metadata_field,
                 tuple(sorted((rule.metadata_predicates or {}).items())),
             )
@@ -91,11 +106,14 @@ class MechanicRegistry:
             definition = rule.definition
             if definition.encounter.encounter_id != encounter.encounter_id or event.event_type not in rule.event_types:
                 continue
-            if definition.ability_ids and event.ability_id not in definition.ability_ids:
+            if definition.ability_ids and not _ability_matches(definition.ability_ids, event.ability_id):
                 continue
             if rule.stopped_ability_ids and (
                 rule.stopped_ability_metadata_field is None
-                or event.metadata.get(rule.stopped_ability_metadata_field) not in rule.stopped_ability_ids
+                or not _ability_matches(
+                    rule.stopped_ability_ids,
+                    event.metadata.get(rule.stopped_ability_metadata_field),
+                )
             ):
                 continue
             if any(event.metadata.get(key) != value for key, value in (rule.metadata_predicates or {}).items()):
@@ -114,7 +132,7 @@ class MechanicRegistry:
             if (rule.definition.encounter.encounter_id != encounter.encounter_id
                     or not rule.exposure_event_types or event.event_type not in rule.exposure_event_types):
                 continue
-            if rule.exposure_ability_ids and event.ability_id not in rule.exposure_ability_ids:
+            if rule.exposure_ability_ids and not _ability_matches(rule.exposure_ability_ids, event.ability_id):
                 continue
             if any(event.metadata.get(key) != value
                    for key, value in (rule.exposure_metadata_predicates or {}).items()):
