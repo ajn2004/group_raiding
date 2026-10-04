@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
-from app.db.models import OAuthState, WebIdentity, WebSession
+from app.db.models import OAuthState, WebIdentity, WebSession, DiscordCommunity
 
 
 def create_state(db: Session, digest: str, return_to: str, expires_at: datetime) -> None:
@@ -52,9 +52,21 @@ def upsert_identity(db: Session, discord_user_id: str, username: str, display_na
 
 
 def create_session(db: Session, identity: WebIdentity, digest: str, csrf_token: str,
-                   expires_at: datetime) -> None:
-    db.add(WebSession(identity=identity, token_digest=digest, csrf_token=csrf_token, expires_at=expires_at))
+                   expires_at: datetime, **values) -> WebSession:
+    row = WebSession(identity=identity, token_digest=digest, csrf_token=csrf_token,
+                     expires_at=expires_at, **values)
+    db.add(row)
     db.flush()
+    return row
+
+
+def ensure_community(db: Session, guild_id: str) -> DiscordCommunity:
+    community = db.scalar(select(DiscordCommunity).where(DiscordCommunity.discord_guild_id == guild_id))
+    if community is None:
+        community = DiscordCommunity(key=f"discord-{guild_id}", discord_guild_id=guild_id, enabled=True)
+        db.add(community)
+        db.flush()
+    return community
 
 
 def invalidate_session(db: Session, digest: str, now: datetime) -> WebSession | None:

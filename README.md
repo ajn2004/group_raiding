@@ -146,6 +146,10 @@ from the browser. Required backend settings are in `apps/backend/.env.example`:
   `${PUBLIC_APP_URL}/api/auth/discord/callback`.
 - `DISCORD_GUILD_ID`: community whose current-user membership may be read. It
   does not grant application permissions.
+- `DISCORD_TOKEN_ENCRYPTION_KEY`: stable Fernet key used to encrypt Discord OAuth
+  credentials at rest for membership refresh. Generate with
+  `uv run python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`.
+  Keep it secret and stable; rotating it requires users to sign in again.
 - `SQLALCHEMY_DATABASE_USER`, `SQLALCHEMY_DATABASE_PASSWORD`,
   `SQLALCHEMY_DATABASE_HOST`, `SQLALCHEMY_DATABASE_PORT`, and
   `SQLALCHEMY_DATABASE_DB`: PostgreSQL connection settings shared with the
@@ -173,8 +177,41 @@ front of the API so the session cookie is first-party. Local HTTP cookies omit
 
 No session signing/encryption secret is required: the API issues cryptographically
 random opaque cookies, stores only a SHA-256 token hash, and invalidates sessions
-server-side on logout. Discord OAuth tokens are transient server-side only and
-are not persisted. This web OAuth client is independent of `DISCORD_BOT_TOKEN`.
+server-side on logout. Discord OAuth tokens are encrypted server-side and never
+returned to clients or logged. This web OAuth client is independent of
+`DISCORD_BOT_TOKEN`.
+
+### Discord RBAC mappings (DAL-82)
+
+Discord role snowflakes map to reusable capabilities, never rank names. The
+supported capability keys are `app.view`, `players.manage`,
+`coaching.configure`, `usage.view`, and `admin.manage_rbac`. Membership and role
+IDs are initially resolved during the OAuth callback.
+`GET /api/auth/session` is read-only and does not contact Discord;
+`POST /api/auth/session/refresh` is the explicit membership/token refresh
+boundary (send the session CSRF token in `X-CSRF-Token`). Capability dependencies
+authorize from the currently persisted membership and role state. Discord
+failures deny privileged capabilities; refresh returns 503 and clears cached
+roles. An unmapped role grants nothing.
+
+After applying migrations, configure mappings from a deployment-managed JSON
+file (role IDs are strings):
+
+```json
+{
+  "community": "primary",
+  "guild_id": "YOUR_DISCORD_COMMUNITY_ID",
+  "mappings": [
+    {"role_id": "YOUR_DISCORD_ROLE_ID", "capabilities": ["app.view", "usage.view"]}
+  ]
+}
+```
+
+Run `uv run python scripts/configure_rbac.py /path/to/rbac-mappings.json` from
+`apps/backend`. The command replaces all mappings for that guild atomically;
+store the file outside source control if it contains production IDs. Changing
+this configuration takes effect on the next API authorization check without a
+frontend change. `GET /api/rbac/mappings` requires `admin.manage_rbac`.
 
 There is no checked-in PostgreSQL compose/service configuration. For a local
 development-only server, start a disposable PostgreSQL container (or connect to
@@ -219,8 +256,9 @@ pnpm web:dev
 ```
 
 Open `http://localhost:3000`, select **Sign in with Discord**, authorize, and
-verify the return to the app. Refresh to verify session restoration, restart the
-backend and refresh again to verify PostgreSQL durability, then sign out and
+verify the return to the app. Reload to verify read-only session restoration,
+use `POST /api/auth/session/refresh` to verify membership refresh, restart the
+backend and reload again to verify PostgreSQL durability, then sign out and
 verify the signed-out view (the previous session cookie must remain invalid).
 Automated auth tests use a fake Discord transport
 and need no credentials. API contracts are `GET /api/auth/session`,
