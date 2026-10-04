@@ -60,13 +60,34 @@ class CoachingSynthesizer:
     def _fallback(self, candidates, progression):
         blocker_subject = (progression.newly_exposed_blocker.subject.subject_id
                            if progression.newly_exposed_blocker else None)
+        subjects = {subject.subject_id: subject for subject in progression.subjects}
+        rates = {delta.subject_id: delta.current_value for delta in progression.deltas
+                 if delta.metric == "failure_rate" and isinstance(delta.current_value, (int, float))}
+        status_rank = {ProgressionStatus.REGRESSED: 0, ProgressionStatus.NEWLY_OBSERVED: 1,
+                       ProgressionStatus.STABLE: 2, ProgressionStatus.IMPROVED: 3}
+        def significance(candidate, use_rates):
+            subject_id = candidate.progression_subject_ids[0] if candidate.progression_subject_ids else None
+            subject = subjects.get(subject_id)
+            rate = rates.get(subject_id)
+            return (
+                not (blocker_subject and subject_id == blocker_subject),
+                status_rank.get(subject.status, 4) if subject else 4,
+                -{"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}[candidate.severity],
+                -int(subject.death_linked) if subject else 0,
+                -int(subject.repeated) if subject else 0,
+                -(rate if use_rates else subject.occurrence_count) if subject else 0,
+            )
+        def ranked(values):
+            comparable = [c for c in values if c.progression_subject_ids and
+                          c.progression_subject_ids[0] in subjects]
+            use_rates = bool(comparable) and all(
+                c.progression_subject_ids[0] in rates for c in comparable)
+            return sorted(values, key=lambda c: (*significance(c, use_rates),
+                                                  c.progression_subject_ids, c.finding_ids,
+                                                  c.candidate_id))
         def ordered(kind, audience=None):
             values = [c for c in candidates if c.kind == kind and (audience is None or c.audience == audience)]
-            return sorted(values, key=lambda c: (
-                c.progression_subject_ids[0] != blocker_subject
-                if blocker_subject and c.progression_subject_ids else False,
-                -{"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}[c.severity],
-                c.progression_subject_ids, c.finding_ids, c.candidate_id))
+            return ranked(values)
         primary = ordered("primary_failure")
         improvements = [c for c in candidates if c.kind == "improvement"]
         # Candidate sequence from generator already prioritizes stabilized, resolved, improved.
@@ -74,17 +95,7 @@ class CoachingSynthesizer:
                                                                -{"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}[c.severity],
                                                                c.progression_subject_ids))
         dps, healer, tank, raid = ordered("role_action", "dps"), ordered("role_action", "healer"), ordered("role_action", "tank"), ordered("raid_action", "raid")
-        subjects = {subject.subject_id: subject for subject in progression.subjects}
-        actions = sorted([*dps, *healer, *tank, *raid], key=lambda c: (
-            not (blocker_subject and blocker_subject in c.progression_subject_ids),
-            -{"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}[c.severity],
-            -int(subjects.get(c.progression_subject_ids[0]).repeated)
-            if c.progression_subject_ids and c.progression_subject_ids[0] in subjects else 0,
-            -int(subjects.get(c.progression_subject_ids[0]).death_linked)
-            if c.progression_subject_ids and c.progression_subject_ids[0] in subjects else 0,
-            -subjects[c.progression_subject_ids[0]].occurrence_count
-            if c.progression_subject_ids and c.progression_subject_ids[0] in subjects else 0,
-            c.progression_subject_ids, c.finding_ids, c.candidate_id))
+        actions = ranked([*dps, *healer, *tank, *raid])
         priorities = []
         priority_subjects = set()
         for candidate in actions:

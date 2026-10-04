@@ -4,7 +4,7 @@ import hashlib
 from app.pull_coach.models import (
     AnalysisMetadata, EncounterIdentity, EvidenceReference, Finding, FindingCategory,
     PullAnalysis, PullIdentity, PullState, RaidReportIdentity,
-    Role, Severity, SourceIdentity, SummaryMetrics,
+    ProgressionStatus, Role, Severity, SourceIdentity, SummaryMetrics,
 )
 from app.pull_coach.progression import ProgressionComparator
 from app.pull_coach.coaching import CoachingConfig, CoachingSynthesizer
@@ -265,3 +265,111 @@ def test_input_rejects_mismatched_progression_and_renderer_preserves_long_primar
         current, ProgressionComparator().compare([current]))
     assert result.rendered_text
     assert len(result.rendered_text) <= 10
+
+
+def test_primary_ranking_uses_occurrences_before_identity_and_singular_grammar():
+    current = pull(1, [failure("z-many", "Z-many"), failure("a-few", "A-few")])
+    # Distinct evidence event counts model unequal deterministic significance.
+    many = replace(failure("z-many", "Z-many"), evidence=tuple(
+        EvidenceReference(f"many-{i}", (f"many-event-{i}",)) for i in range(5)))
+    few = replace(failure("a-few", "A-few"), evidence=(EvidenceReference("few", ("few-event",)),))
+    current = pull(1, [many, few])
+    progression = ProgressionComparator().compare([current])
+    result = CoachingSynthesizer().synthesize(current, progression)
+    assert result.public.primary_failure.mechanic_id == "Z-many"
+    singular = pull(1, [replace(failure("one", "One"), fact={"failure_category": "avoidable_damage", "hit_count": 1})])
+    assert "was hit 1 time this pull" in CoachingSynthesizer().synthesize(
+        singular, ProgressionComparator().compare([singular])).public.primary_failure.text
+
+
+def test_primary_ranking_death_linkage_then_repetition_precede_counts():
+    base = [failure("many", "A-many"), failure("linked", "Z-linked")]
+    death = Finding("death", FindingCategory.DEATH, Severity.HIGH,
+        {"failure_category": "avoidable_damage"},
+        (EvidenceReference("death-e", ("death-event",)),), (), (), related_finding_ids=("linked",))
+    current = pull(1, [*base, death])
+    progression = ProgressionComparator().compare([current])
+    selected = CoachingSynthesizer().synthesize(current, progression).public.primary_failure
+    assert selected.mechanic_id == "Z-linked"
+
+    single = replace(failure("single", "Z-single"), fact={"failure_category": "avoidable_damage", "hit_count": 1})
+    repeated = replace(failure("repeat", "A-repeat"), fact={"failure_category": "avoidable_damage", "hit_count": 1, "repeated": True})
+    current = pull(1, [single, repeated])
+    result = CoachingSynthesizer().synthesize(current, ProgressionComparator().compare([current]))
+    assert result.public.primary_failure.mechanic_id == "A-repeat"
+
+
+def test_category_improvement_is_suppressed_only_for_shared_mechanic_evidence():
+    prior = pull(1, [failure("old-a", "A"), failure("old-b", "B")])
+    current = pull(2, [failure("new-a", "A"), failure("new-b", "B")])
+    progression = ProgressionComparator().compare([prior, current])
+    progression = replace(progression, subjects=tuple(
+        replace(subject, status=ProgressionStatus.IMPROVED)
+        if subject.subject_id in ("mechanic:A", "mechanic:B", "category:avoidable_damage") else subject
+        for subject in progression.subjects))
+    result = CoachingSynthesizer().synthesize(current, progression, history=(prior,))
+    improved = [candidate for candidate in result.candidates if candidate.kind == "improvement"]
+    # Both named mechanics remain independent; overlapping category wording is omitted.
+    assert {candidate.mechanic_id for candidate in improved} == {"A", "B"}
+
+
+def test_category_improvement_is_retained_when_named_mechanic_covers_only_part_of_evidence():
+    prior = pull(1, [failure("old-a", "A"), failure("old-other", None)])
+    current = pull(2, [failure("new-a", "A"), failure("new-other", None)])
+    progression = ProgressionComparator().compare([prior, current])
+    progression = replace(progression, subjects=tuple(
+        replace(subject, status=ProgressionStatus.IMPROVED)
+        if subject.subject_id in ("mechanic:A", "category:avoidable_damage") else subject
+        for subject in progression.subjects))
+    result = CoachingSynthesizer().synthesize(current, progression, history=(prior,))
+    improved = [candidate for candidate in result.candidates if candidate.kind == "improvement"]
+    assert {candidate.progression_subject_ids[0] for candidate in improved} == {
+        "mechanic:A", "category:avoidable_damage"}
+
+
+def test_primary_ranking_uses_failure_rate_when_present_and_count_otherwise():
+    from app.pull_coach.models import ProgressionDelta
+    many = replace(failure("many", "A-many"), evidence=tuple(
+        EvidenceReference(f"many-{i}", (f"many-event-{i}",)) for i in range(4)))
+    few = replace(failure("few", "Z-few"), evidence=tuple(
+        EvidenceReference(f"few-{i}", (f"few-event-{i}",)) for i in range(2)))
+    current = pull(1, [many, few])
+    progression = ProgressionComparator().compare([current])
+    subjects = tuple(replace(subject, repeated=True) for subject in progression.subjects)
+    rates = (ProgressionDelta("mechanic:A-many", None, None, 1, "failure_rate", 1.0, 0.1),
+             ProgressionDelta("mechanic:Z-few", None, None, 1, "failure_rate", 1.0, 0.9))
+    with_rates = replace(progression, subjects=subjects, deltas=rates)
+    assert CoachingSynthesizer().synthesize(current, with_rates).public.primary_failure.mechanic_id == "Z-few"
+    without_rates = replace(progression, subjects=subjects, deltas=())
+    assert CoachingSynthesizer().synthesize(current, without_rates).public.primary_failure.mechanic_id == "A-many"
+    mixed_rates = replace(progression, deltas=(
+        ProgressionDelta("mechanic:A-many", None, None, 1, "failure_rate", 1.0, 0.9),))
+    # Mixed availability selects a common raw-count metric for every candidate.
+    assert CoachingSynthesizer().synthesize(current, mixed_rates).public.primary_failure.mechanic_id == "A-many"
+
+
+def test_exposed_clean_reappearance_on_kill_outranks_stable_repeated_failure():
+    from app.pull_coach.models import ExposureState, MechanicExposure, PullState
+
+    def scenario_pull(number, failures, opportunities=()):
+        analysis = pull(number, failures)
+        return replace(analysis, mechanic_exposures=tuple(
+            MechanicExposure(mechanic, ExposureState.EXPOSED, count)
+            for mechanic, count in opportunities))
+
+    a1 = failure("a1", "A")
+    b1 = replace(failure("b1", "B"), evidence=tuple(
+        EvidenceReference(f"b1-{i}", (f"b1-event-{i}",)) for i in range(5)))
+    a3 = failure("a3", "A")
+    b3 = replace(failure("b3", "B"), evidence=tuple(
+        EvidenceReference(f"b3-{i}", (f"b3-event-{i}",)) for i in range(5)))
+    first = scenario_pull(1, [a1, b1], (("A", 1),))
+    clean = scenario_pull(2, [replace(b1, finding_id="b2")], (("A", 1),))
+    third = scenario_pull(3, [a3, b3], (("A", 1),))
+    third = replace(third, pull=replace(third.pull, state=PullState.KILL, boss_percent=0))
+    progression = ProgressionComparator().compare([first, clean, third])
+    assert progression.pull_result == ProgressionStatus.IMPROVED
+    assert next(subject for subject in progression.subjects if subject.subject_id == "mechanic:A").status == ProgressionStatus.REGRESSED
+    assert next(subject for subject in progression.subjects if subject.subject_id == "mechanic:B").status == ProgressionStatus.STABLE
+    coaching = CoachingSynthesizer().synthesize(third, progression, history=(first, clean))
+    assert coaching.public.primary_failure.mechanic_id == "A"

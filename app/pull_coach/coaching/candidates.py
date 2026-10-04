@@ -42,7 +42,8 @@ def generate(value):
                 text = f"{label} is a newly exposed raid-wide pressure point this pull."
         elif category == "avoidable_damage":
             count = sum((dict(f.fact).get("hit_count") or 1) for f in findings)
-            text = f"{label} was hit {count} times this pull."
+            unit = "time" if count == 1 else "times"
+            text = f"{label} was hit {count} {unit} this pull."
         else:
             text = f"{label}: {category.replace('_', ' ')} failure was observed."
         candidates.append(CoachingCandidate(_id("primary", "raid", (subject_id, *finding_ids)), "raid",
@@ -84,5 +85,28 @@ def generate(value):
         improvements.append(CoachingCandidate(_id("improvement", "raid", (subject.subject_id, *ids)),
             "raid", "improvement", ids, (subject.subject_id,), mechanic, subject.failure_category,
             "high" if subject.max_severity_rank >= 3 else "medium", text))
-    candidates.extend(improvements)
+    # Keep aggregate category progression internally, but do not publish it when
+    # an equivalent named mechanic statement is grounded by the same evidence.
+    by_id = {f.finding_id: f for f in value.findings}
+    retained = []
+    for candidate in improvements:
+        subject = next((s for s in value.progression.subjects
+                        if s.subject_id == candidate.progression_subject_ids[0]), None)
+        if subject and subject.subject_type == "category":
+            candidate_evidence = {e for fid in candidate.finding_ids
+                                  for e in by_id.get(fid, ()).evidence_ids} if candidate.finding_ids else set()
+            covered_evidence = set()
+            for other in improvements:
+                other_subject = next((s for s in value.progression.subjects
+                                      if s.subject_id == other.progression_subject_ids[0]), None)
+                if (other_subject and other_subject.subject_type == "mechanic" and
+                        other_subject.failure_category == subject.failure_category and
+                        other_subject.status == subject.status):
+                    other_evidence = {e for fid in other.finding_ids
+                                      for e in by_id.get(fid, ()).evidence_ids}
+                    covered_evidence.update(other_evidence)
+            if candidate_evidence and candidate_evidence <= covered_evidence:
+                continue
+        retained.append(candidate)
+    candidates.extend(retained)
     return tuple(sorted(candidates, key=lambda candidate: candidate.candidate_id))
