@@ -1,0 +1,20 @@
+.main {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem;
+}
+
+.card {
+  width: min(100%, 38rem);
+  padding: 3rem;
+  border: 1px solid #dce2eb;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 1.5rem 4rem rgb(23 32 51 / 8%);
+}
+
+.card h1 { margin: 0 0 1rem; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; }
+.card p { color: var(--muted); }
+.card p[role="status"]::before { color: var(--accent); content: "● "; }
+.eyebrow { margin: 0 0 .75rem; color: var(--accent) !important; font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
