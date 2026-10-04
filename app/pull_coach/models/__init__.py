@@ -2,7 +2,7 @@
 
 from app.pull_coach.models.contracts import (
     Actor, AnalysisMetadata, EncounterIdentity, EvidenceReference, Finding,
-    FindingCategory, MechanicDefinition, MechanicObservation, NormalizedEvent, ProgressionDelta,
+    FindingCategory, ExposureState, MechanicDefinition, MechanicExposure, MechanicObservation, NormalizedEvent, ProgressionDelta,
     ProgressionStatus, PullAnalysis, PullIdentity, PullState, RaidReportIdentity,
     Role, Severity, SourceIdentity, SummaryMetrics, TimingWindow, normalized_event,
     EventType,

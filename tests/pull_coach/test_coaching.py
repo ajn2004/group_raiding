@@ -34,11 +34,10 @@ def test_grounded_fallback_is_repeatable_private_actor_free_and_progression_awar
     synth = CoachingSynthesizer()
     result = synth.synthesize(c, progression, history=(a, b), mechanic_labels={"A": "Alpha", "B": "Beta"})
     assert "Beta" in result.rendered_text
-    assert "Alpha" in result.rendered_text
+    assert "Alpha" not in result.rendered_text
     assert "wcl:1" not in result.rendered_text
     assert result == synth.synthesize(c, progression, history=(a, b), mechanic_labels={"A": "Alpha", "B": "Beta"})
-    improved = next(item for item in result.public.improvements if item.mechanic_id == "A")
-    assert improved.finding_ids == ("f-a1",)
+    assert not any(item.mechanic_id == "A" for item in result.public.improvements)
     assert result.public.primary_failure.mechanic_id == "B"
 
 

@@ -8,13 +8,13 @@ from typing import Iterable
 from app.pull_coach.mechanics import MechanicMatch, MechanicRegistry
 from app.pull_coach.models import (
     Actor, AnalysisMetadata, EventType, EvidenceReference, Finding,
-    FindingCategory, MechanicObservation, NormalizedEvent, PullAnalysis,
+    ExposureState, FindingCategory, MechanicExposure, MechanicObservation, NormalizedEvent, PullAnalysis,
     PullIdentity, Role, Severity, SummaryMetrics,
 )
 from app.pull_coach.analysis.config import AnalyzerConfig
 
 ANALYZER_NAME = "pull-coach-deterministic"
-ANALYZER_VERSION = "1"
+ANALYZER_VERSION = "2"
 
 
 def _subject(event: NormalizedEvent, match: MechanicMatch) -> str | None:
@@ -48,9 +48,14 @@ class PullAnalyzer:
         actor_by_id = {actor.actor_id: actor for actor in actors}
         ordered = sorted(enumerate(events), key=lambda pair: (pair[1].timestamp, pair[0]))
         matches_by_index: dict[int, tuple[MechanicMatch, ...]] = {}
+        exposure_counts: dict[str, int] = defaultdict(int)
+        exposure_evidence: dict[str, list] = defaultdict(list)
         observations: list[MechanicObservation] = []
         # Stable IDs refer to source evidence rather than iteration/hash order.
         for index, event in ordered:
+            for mechanic_id, evidence in self.registry.exposure_matches(pull.encounter, event):
+                exposure_counts[mechanic_id] += 1
+                exposure_evidence[mechanic_id].append(evidence)
             matches = self.registry.match(pull.encounter, event)
             matches_by_index[index] = matches
             for match in matches:
@@ -252,8 +257,19 @@ class PullAnalyzer:
             "dispel_failure_count": sum(f.category == FindingCategory.DISPEL and f.fact["outcome"] == "failure" for f in findings),
             "failure_categories": ",".join(cats), "mechanic_registry_version": self.registry.registry_version,
         })
+        exposures = tuple(
+            MechanicExposure(
+                rule.definition.mechanic_id,
+                (ExposureState.EXPOSED if exposure_counts.get(rule.definition.mechanic_id, 0)
+                 else ExposureState.NOT_EXPOSED),
+                exposure_counts.get(rule.definition.mechanic_id, 0),
+                tuple(exposure_evidence.get(rule.definition.mechanic_id, ())),
+            ) if rule.exposure_event_types else
+            MechanicExposure(rule.definition.mechanic_id, ExposureState.UNKNOWN)
+            for rule in self.registry.rules_for_encounter(pull.encounter)
+        )
         return PullAnalysis(pull, tuple(findings), tuple(observations), summary,
-                            AnalysisMetadata(ANALYZER_NAME, ANALYZER_VERSION))
+                            AnalysisMetadata(ANALYZER_NAME, ANALYZER_VERSION), exposures)
 
     @staticmethod
     def _append_finding(findings, pull, category, severity, fact, evidence, actor_ids,

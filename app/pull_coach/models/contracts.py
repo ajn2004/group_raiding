@@ -29,6 +29,12 @@ class EventType(str, Enum):
     OTHER = "other"
 
 
+class ExposureState(str, Enum):
+    EXPOSED = "exposed"
+    NOT_EXPOSED = "not_exposed"
+    UNKNOWN = "unknown"
+
+
 class Severity(str, Enum):
     INFO = "info"
     LOW = "low"
@@ -147,6 +153,18 @@ class MechanicDefinition:
 
 
 @dataclass(frozen=True)
+class MechanicExposure:
+    mechanic_id: str
+    state: ExposureState
+    opportunity_count: int | None = None
+    evidence: tuple["EvidenceReference", ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.opportunity_count is not None and self.opportunity_count < 0:
+            raise ValueError("opportunity_count must be non-negative")
+
+
+@dataclass(frozen=True)
 class EvidenceReference:
     evidence_id: str
     event_ids: tuple[str, ...] = ()
@@ -206,6 +224,7 @@ class PullAnalysis:
     mechanic_observations: tuple[MechanicObservation, ...]
     summary: SummaryMetrics
     analyzer: AnalysisMetadata
+    mechanic_exposures: tuple[MechanicExposure, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from app.pull_coach.models import (
-    EncounterIdentity, EventType, MechanicDefinition, NormalizedEvent,
+    EncounterIdentity, EventType, EvidenceReference, MechanicDefinition, NormalizedEvent,
 )
 
 
@@ -18,6 +18,9 @@ class MechanicRule:
     stopped_ability_ids: tuple[int | str, ...] = ()
     stopped_ability_metadata_field: str | None = None
     relationships: Mapping[str, Any] | None = None
+    exposure_event_types: tuple[EventType, ...] = ()
+    exposure_ability_ids: tuple[int | str, ...] = ()
+    exposure_metadata_predicates: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,11 @@ class MechanicRegistry:
         """All configured definitions, in stable registry order."""
         return tuple(rule.definition for rule in self._rules)
 
+    def rules_for_encounter(self, encounter: EncounterIdentity) -> tuple[MechanicRule, ...]:
+        """Return configured rule contracts for an encounter in stable order."""
+        return tuple(rule for rule in self._rules
+                     if rule.definition.encounter.encounter_id == encounter.encounter_id)
+
     def match(self, encounter: EncounterIdentity, event: NormalizedEvent) -> tuple[MechanicMatch, ...]:
         matches = []
         for rule in self._rules:
@@ -88,3 +96,19 @@ class MechanicRegistry:
                 rule.weight, rule.relationships or {},
             ))
         return tuple(sorted(matches, key=lambda match: (-match.weight, match.definition.mechanic_id)))
+
+    def exposure_matches(self, encounter: EncounterIdentity, event: NormalizedEvent) -> tuple[tuple[str, EvidenceReference], ...]:
+        """Return mechanics and source evidence for configured opportunity markers."""
+        found = []
+        for rule in self._rules:
+            if (rule.definition.encounter.encounter_id != encounter.encounter_id
+                    or not rule.exposure_event_types or event.event_type not in rule.exposure_event_types):
+                continue
+            if rule.exposure_ability_ids and event.ability_id not in rule.exposure_ability_ids:
+                continue
+            if any(event.metadata.get(key) != value
+                   for key, value in (rule.exposure_metadata_predicates or {}).items()):
+                continue
+            found.append((rule.definition.mechanic_id, EvidenceReference(
+                event.evidence_id, (event.evidence_id,), "mechanic exposure marker")))
+        return tuple(sorted(found, key=lambda item: item[0]))

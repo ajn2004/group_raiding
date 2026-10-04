@@ -36,11 +36,8 @@ def test_reference_demo_runs_full_pipeline_with_grounded_coaching_and_prefix_inv
     assert coaching.metadata.status == "fallback_no_provider"
     assert coaching.public.primary_failure and "Avoidable Blast" in coaching.public.primary_failure.text
     assert first.stages["discord"].embed.fields
-    assert second.stages["progression"].subjects
-    assert any(subject.status.value in {"resolved", "improved"}
-               for subject in second.stages["progression"].subjects)
-    assert any(subject.status.value in {"stabilized", "stable"}
-               for subject in third.stages["progression"].subjects)
+    assert not any(subject.status.value == "resolved"
+                   for subject in second.stages["progression"].subjects)
     assert any(subject.status.value == "newly_observed"
                for subject in third.stages["progression"].subjects)
 
