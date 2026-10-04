@@ -6,6 +6,7 @@ from typing import Any
 
 from app.pull_coach.coaching.inference import (
     CoachingInferenceError, InvalidCoachingResponse, OpenRouterConfig, OpenRouterInferenceProvider,
+    build_coaching_messages,
     ProviderRequestError,
 )
 from app.pull_coach.orchestration import CoachingRunResult, CoachingSourceError
@@ -76,10 +77,7 @@ class WipefestCoachingSource:
                     context_schema_version=str(context["context_schema_version"]), request_context=context,
                     profile_revision_id=revision.id, audience=audience, target_player_id=target_player_id,
                     target_player_name=None if player_info is None else player_info.get("name"),
-                    messages=({"role": "system", "content": revision.system_prompt},
-                        {"role": "user", "content": revision.user_prompt_template +
-                         "\n\nCoaching context:\n" + json.dumps(
-                             context, sort_keys=True, ensure_ascii=False, allow_nan=False)}))
+                    messages=tuple(build_coaching_messages(context, revision)))
                 try:
                     if self.inference is not None:
                         inference = self.inference

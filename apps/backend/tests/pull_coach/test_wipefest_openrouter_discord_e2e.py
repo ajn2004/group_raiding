@@ -14,9 +14,11 @@ from app.db.models import Base
 from app.db.models.pull_coach import CoachingSession, CoachingSessionMessage
 from app.db.models.wipefest import WipefestFightSnapshot
 from app.pull_coach.coaching.inference import OpenRouterConfig, OpenRouterInferenceProvider
+from app.pull_coach.orchestration import CoachingOrchestrator
 from app.pull_coach.persistence.coaching_profiles import CoachingProfileRepository
 from app.pull_coach.presentation import PullCoachPresenter
-from app.pull_coach.sources import WipefestCoachingSource
+from app.pull_coach.service import PullCoachService
+from app.pull_coach.sources import LazyLegacyWCLCoachingSource, WipefestCoachingSource
 from app.web_requests.wipefest import FightSnapshot
 
 
@@ -72,14 +74,14 @@ def test_wipefest_openrouter_discord_vertical_slice_without_wcl_events(monkeypat
     assert payload["playerValues"] and payload["playerValues"][0]["values"]
     assert payload["raid"]["players"]
 
-    # The source under test starts from Wipefest identity and cannot call WCL event ingestion.
-    from app.web_requests.warcraft_logs import WCLClient
-    monkeypatch.setattr(WCLClient, "report_data", lambda *a, **k: (_ for _ in ()).throw(
-        AssertionError("WCL report/event ingestion must not be called by the Wipefest path")))
-    # Mechanic registry lookup is similarly forbidden: Wipefest insights are self-describing.
-    from app.pull_coach.mechanics import registry
-    monkeypatch.setattr(registry, "load_mechanic_registry", lambda *a, **k: (_ for _ in ()).throw(
-        AssertionError("local mechanic registry is not required for Wipefest coaching")), raising=False)
+    class FakeWCL:
+        def report_data(self, code):
+            assert code == REPORT
+            return {"fights": [{"id": 10, "encounterID": 1507, "name": FIGHT["name"],
+                "startTime": 0, "endTime": 1, "inProgress": False}]}
+
+        def ingest_fight(self, *args, **kwargs):
+            raise AssertionError("WCL combat-event ingestion must not occur")
 
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
@@ -104,9 +106,12 @@ def test_wipefest_openrouter_discord_vertical_slice_without_wcl_events(monkeypat
     transport = FakeOpenRouterTransport()
     inference = OpenRouterInferenceProvider(OpenRouterConfig(api_key="fixture-only", retries=0), transport)
     source = WipefestCoachingSource(wipefest, session_factory, inference)
-    raid = source.coach(REPORT, FIGHT)
-    player = source.coach_player(REPORT, FIGHT, "10")
-    same_raid = source.coach(REPORT, FIGHT)
+    legacy = LazyLegacyWCLCoachingSource(lambda: (_ for _ in ()).throw(
+        AssertionError("legacy mechanics path must not be constructed")))
+    service = PullCoachService(FakeWCL(), CoachingOrchestrator(source, legacy))
+    raid = service.run(REPORT, "10")
+    player = service.run_player(REPORT, "10", "10")
+    same_raid = service.run(REPORT, "10")
 
     assert wipefest.calls == [(REPORT, "10", "1507")] * 3
     assert len(transport.requests) == 2  # the repeated persisted raid session is a cache hit
@@ -148,3 +153,9 @@ def test_wipefest_openrouter_discord_vertical_slice_without_wcl_events(monkeypat
                 CoachingSessionMessage.session_id == run.id).order_by(CoachingSessionMessage.sequence)))
             assert [message.role for message in messages] == ["system", "user", "assistant"]
             assert messages[-1].content == jsonlib.dumps(run.structured_response, sort_keys=True, ensure_ascii=False)
+            request_messages = transport.requests[0 if run.audience == "raid" else 1]["messages"]
+            assert [message.content for message in messages[:2]] == [m["content"] for m in request_messages]
+            if run.audience == "player":
+                assert run.request_context["playerValues"]
+                assert run.request_context["evaluation"]
+                assert run.request_context["player"]["name"] == "Aleannora"
