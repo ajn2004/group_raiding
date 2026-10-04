@@ -82,3 +82,48 @@ def test_dal70_revision_seeds_active_profiles_and_downgrades_in_isolated_sqlite(
         assert "profile_revision_id" not in {
             column["name"] for column in inspect(connection).get_columns("pull_coach_coaching_outputs")
         }
+
+
+def test_dal72_revision_upgrades_and_downgrades_after_dal70():
+    engine = create_engine("sqlite://")
+    versions = Path(__file__).parents[2] / "alembic/versions"
+    modules = []
+    for name, filename in (("dal46", "dal46_pull_coach_persistence.py"),
+                           ("dal68", "dal68_wipefest_snapshots.py"),
+                           ("dal70", "dal70_coaching_profiles.py"),
+                           ("dal72", "dal72_coaching_sessions.py")):
+        spec = importlib.util.spec_from_file_location(name, versions / filename)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        modules.append(module)
+
+    with engine.begin() as connection:
+        connection.exec_driver_sql("CREATE TABLE players (id INTEGER PRIMARY KEY)")
+        for module in modules:
+            run_revision(connection, module.upgrade)
+        inspector = inspect(connection)
+        assert {"coaching_sessions", "coaching_session_messages"}.issubset(inspector.get_table_names())
+        assert {"snapshot_id", "profile_revision_id"}.issubset(
+            {fk["constrained_columns"][0] for fk in inspector.get_foreign_keys("coaching_sessions")})
+        checks = {item["name"] for item in inspector.get_check_constraints("coaching_sessions")}
+        assert {"ck_coaching_session_audience", "ck_coaching_session_status", "ck_coaching_session_target"} <= checks
+        message_checks = {item["name"] for item in inspector.get_check_constraints("coaching_session_messages")}
+        assert {"ck_coaching_session_message_role", "ck_coaching_session_message_sequence"} <= message_checks
+        assert {"ix_coaching_sessions_snapshot", "ix_coaching_sessions_fight"} <= {
+            index["name"] for index in inspector.get_indexes("coaching_sessions")}
+        assert any(item["column_names"] == ["session_id", "sequence"]
+                   for item in inspector.get_unique_constraints("coaching_session_messages"))
+
+        connection.exec_driver_sql("INSERT INTO wipefest_fight_snapshots "
+            "(provider, report_code, fight_id, group_id, request_url, request_params, fetched_at, payload, fingerprint) "
+            "VALUES ('wipefest', 'R1', 'F1', 'G1', 'https://example.test', '{}', CURRENT_TIMESTAMP, '{}', 'abc')")
+        connection.exec_driver_sql("INSERT INTO coaching_sessions "
+            "(snapshot_id, report_code, fight_id, encounter_id, audience, context_schema_version, "
+            "context_fingerprint, request_context, profile_revision_id, provider, requested_model, status) "
+            "VALUES (1, 'R1', 'F1', 'boss', 'raid', 'v1', 'abc', '{}', 1, 'openrouter', 'model', 'pending')")
+        connection.exec_driver_sql("INSERT INTO coaching_session_messages "
+            "(session_id, sequence, role, content) VALUES (1, 0, 'user', 'hello')")
+        run_revision(connection, modules[3].downgrade)
+        tables = set(inspect(connection).get_table_names())
+        assert "coaching_sessions" not in tables and "coaching_session_messages" not in tables
+        assert {"coaching_profiles", "coaching_profile_revisions"} <= tables

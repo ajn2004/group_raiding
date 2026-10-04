@@ -12,6 +12,8 @@ from .betOutcome import BetOutcome
 from .pull_coach import (
     CoachingProfile,
     CoachingProfileRevision,
+    CoachingSession,
+    CoachingSessionMessage,
     CoachingOutput,
     PullCoachAnalysis,
     PullCoachEvidence,
