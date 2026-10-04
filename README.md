@@ -4,7 +4,7 @@ Guild tooling for Presynaptic, including the deterministic Pull Coach V0.
 
 This repository is a polyglot monorepo. `apps/backend` is the Python
 server-side application and `apps/web` is the React/TypeScript presentation
-application. They will meet at the future HTTP/OpenAPI boundary.
+application. They communicate through the HTTP/OpenAPI boundary.
 
 ```text
 apps/backend/ Python bot, persistence, integrations, Pull Coach, migrations, tests
@@ -16,72 +16,127 @@ Python domain and business logic remain authoritative. Browser/UI code must not
 import Python persistence models or duplicate domain rules. Web/backend
 contracts cross the HTTP API/OpenAPI boundary.
 
-## Install and run
+## Local frontend development
 
-Install Python, [uv](https://docs.astral.sh/uv/), Node.js, and pnpm. Run Python
-commands from `apps/backend` (or use the root `pnpm backend:*` convenience
-scripts):
+Run all commands in this section from the repository root. The web app and
+Python API are separate processes; keep each running in its own terminal.
+
+### Prerequisites and first-time setup
+
+Install Node.js 22, pnpm 10.12.4 (the version pinned in `package.json`),
+Python 3.10 or newer within the backend's supported `>=3.10,<4` range, and
+[uv](https://docs.astral.sh/uv/).
+
+Install both workspaces' dependencies:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm backend:sync
+```
+
+The current web shell and API health endpoint do not require a database,
+a running Discord bot, or Discord/Warcraft Logs/model-provider credentials.
+No `.env` file is needed for this basic startup flow. Discord sign-in is
+separate work in DAL-81.
+
+### Start the app
+
+In terminal 1, start the Python API:
+
+```bash
+pnpm backend:api
+```
+
+In terminal 2, start the Next.js frontend:
+
+```bash
+pnpm web:dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). The page should show
+"The web app is running" and the API health result. Next.js updates the page
+as you edit files under `apps/web`; the API also runs with automatic reload.
+Use Ctrl+C in each terminal to stop the services.
+
+The browser calls same-origin `/api/*` URLs. Next.js forwards those requests to
+`http://127.0.0.1:8000` by default. To check the connection:
+
+```bash
+# Python API directly
+curl http://127.0.0.1:8000/api/healthz
+
+# Through the frontend's API proxy
+curl http://localhost:3000/api/healthz
+```
+
+Both should return `{"status":"ok","api_version":"v1"}`. Interactive API docs
+are available at [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs).
+
+### Configuration and troubleshooting
+
+- If the page loads but its API check fails, confirm `pnpm backend:api` is
+  still running and test the direct health URL above.
+- If port 3000 is occupied, use the URL printed by Next.js or start on a chosen
+  port with `pnpm web:dev --port 3001`.
+- If the API needs a different port, start it with
+  `pnpm backend:api --port 8001`, then start the frontend with
+  `API_PROXY_TARGET=http://127.0.0.1:8001 pnpm web:dev`.
+- `API_PROXY_TARGET` is a server-side Next.js setting. For a persistent local
+  override, add it to `apps/web/.env.local` and restart the frontend. Browser
+  requests continue to use the same-origin `/api` path.
+- Running `pnpm web:dev` starts only the frontend. It does not start the API
+  or Discord bot.
+
+### Frontend checks and API types
+
+Run the frontend checks from the repository root:
+
+```bash
+pnpm web:lint
+pnpm web:typecheck
+pnpm web:build
+```
+
+Install the Playwright browser once before running the test suite:
+
+```bash
+pnpm --filter @group-raiding/web exec playwright install chromium
+pnpm web:test
+```
+
+The web test command checks generated API types, runs Vitest, and runs the
+Playwright smoke test. Playwright starts the local API and frontend itself
+(or reuses running servers outside CI) and requires no external services.
+
+When the backend API contract changes, regenerate the checked-in schema and
+TypeScript definitions:
+
+```bash
+pnpm backend:openapi
+pnpm web:generate-api
+```
+
+The generated files live in `apps/web/src/lib/api/generated/`. Consume these
+types rather than duplicating backend response definitions.
+
+## Discord bot development
+
+The bot is a separate backend entrypoint. From the repository root:
 
 ```bash
 cd apps/backend
 uv sync
-cp .env.example .env   # fill in only credentials needed for your workflow
+cp .env.example .env   # first-time setup; fill in credentials for your workflow
 uv run python main.py
 ```
-
-Run tests with `uv run pytest` in `apps/backend`. Python imports retain the
-package name `app`; Alembic and backend-relative data/mechanics paths are rooted
-there as well.
-
-Install JavaScript workspace dependencies from the repository root with:
-
-```bash
-pnpm install
-```
-
-Start the web client with `pnpm web:dev` (or `pnpm --filter @group-raiding/web dev`).
-The root `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` commands
-(also available as `pnpm web:lint`, `pnpm web:typecheck`, `pnpm web:test`, and
-`pnpm web:build`) run the web quality checks. Web and backend API are independent services;
-starting the browser app does not implicitly start the bot or API.
-
-### HTTP API development
-
-The FastAPI service runs independently of the Discord bot. Start it from the
-repository root; once the Next.js app is available, start the web app in another
-terminal:
-
-```bash
-pnpm backend:api
-pnpm web:dev
-```
-
-The Next.js `/api/*` rewrite defaults to `http://127.0.0.1:8000`. Set
-`API_PROXY_TARGET` when the Python API listens elsewhere; this is a server-side
-Next.js environment variable and the browser always calls its same-origin `/api`
-path. The checked-in schema and generated TypeScript definitions are refreshed
-with `pnpm backend:openapi` followed by `pnpm web:generate-api`.
-
-The health endpoint is `GET /api/healthz`; interactive docs are at
-`/api/docs`. Export the reproducible OpenAPI contract from the repository root with:
-
-```bash
-pnpm backend:openapi
-```
-
-The generated document belongs in
-`apps/web/src/lib/api/generated/openapi.json`. Derived TypeScript API types
-should live alongside it in `apps/web/src/lib/api/generated/` and be generated
-from this contract rather than duplicating backend response definitions.
-
-The Playwright smoke test starts the local FastAPI app and Next.js app, then
-checks the real browser-to-Python `/api/healthz` request through the same-origin
-rewrite. It needs no external services. Install its browser once with
-`pnpm --filter @group-raiding/web exec playwright install chromium`.
 
 The legacy bot uses `DISCORD_BOT_TOKEN` and the `SQLALCHEMY_DATABASE_*` values
 for database-backed features. Pull Coach's offline demo does not need Discord,
 database, Warcraft Logs, or model-provider credentials.
+
+Run backend tests with `uv run pytest` in `apps/backend`. Python imports retain
+the package name `app`; Alembic and backend-relative data/mechanics paths are
+rooted there as well. Run the Python commands below from `apps/backend`.
 
 ## Pull Coach V0
 
