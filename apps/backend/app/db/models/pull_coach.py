@@ -8,6 +8,39 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 
+class CoachingProfile(Base):
+    __tablename__ = "coaching_profiles"
+
+    purpose: Mapped[str] = mapped_column(String(100), primary_key=True)
+    active_revision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("coaching_profile_revisions.id", use_alter=True, name="fk_coaching_profile_active_revision"))
+    revisions: Mapped[list["CoachingProfileRevision"]] = relationship(
+        back_populates="profile", foreign_keys="CoachingProfileRevision.profile_purpose",
+        cascade="all, delete-orphan", order_by="CoachingProfileRevision.revision")
+    active_revision: Mapped["CoachingProfileRevision | None"] = relationship(
+        foreign_keys=[active_revision_id], post_update=True)
+
+
+class CoachingProfileRevision(Base):
+    __tablename__ = "coaching_profile_revisions"
+    __table_args__ = (UniqueConstraint("profile_purpose", "revision", name="uq_coaching_profile_revision"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_purpose: Mapped[str] = mapped_column(ForeignKey("coaching_profiles.purpose", ondelete="CASCADE"), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    provider: Mapped[str] = mapped_column(String(100), nullable=False)
+    model_slug: Mapped[str] = mapped_column(String(255), nullable=False)
+    system_prompt: Mapped[str] = mapped_column(String, nullable=False)
+    user_prompt_template: Mapped[str] = mapped_column(String, nullable=False)
+    output_schema_version: Mapped[str] = mapped_column(String(100), nullable=False)
+    temperature: Mapped[float | None] = mapped_column(Float)
+    max_output_tokens: Mapped[int | None] = mapped_column(Integer)
+    provider_options: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_by: Mapped[str | None] = mapped_column(String(255))
+    profile: Mapped[CoachingProfile] = relationship(back_populates="revisions", foreign_keys=[profile_purpose])
+
+
 class PullCoachReport(Base):
     __tablename__ = "pull_coach_reports"
     __table_args__ = (UniqueConstraint("scope", "provider", "report_code", name="uq_pc_report_scope_provider_code"),)
@@ -94,6 +127,7 @@ class CoachingOutput(Base):
     generator: Mapped[str | None] = mapped_column(String(255))
     model: Mapped[str | None] = mapped_column(String(255))
     template_version: Mapped[str | None] = mapped_column(String(255))
+    profile_revision_id: Mapped[int | None] = mapped_column(ForeignKey("coaching_profile_revisions.id"))
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)

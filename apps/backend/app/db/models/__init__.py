@@ -10,6 +10,8 @@ from .bet import Bet
 from .betEvent import BetEvent
 from .betOutcome import BetOutcome
 from .pull_coach import (
+    CoachingProfile,
+    CoachingProfileRevision,
     CoachingOutput,
     PullCoachAnalysis,
     PullCoachEvidence,
