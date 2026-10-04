@@ -3,13 +3,18 @@ import asyncio
 from dataclasses import dataclass
 import inspect
 import logging
+import os
 
 import discord
 from discord.ext import commands
 
 from app.pull_coach.analysis import PullAnalyzer
 from app.pull_coach.coaching import CoachingSynthesizer
-from app.pull_coach.mechanics.store import configured_mechanics_registry
+from app.pull_coach.mechanics.store import (
+    DirectoryMechanicsStore,
+    MechanicsStoreError,
+    configured_mechanics_registry,
+)
 from app.pull_coach.presentation import PullCoachPresenter, to_discord_embed
 from app.pull_coach.progression import ProgressionComparator
 from app.pull_coach.workflow import (
@@ -17,7 +22,14 @@ from app.pull_coach.workflow import (
     PullCoachConfigurationError, PullCoachWorkflow, PullCoachWorkflowError,
     UnsupportedEncounter,
 )
-from app.pull_coach.history import EncounterCatalogDiscovery, HistoricalEncounterCatalog, NoCatalogEncounters
+from app.pull_coach.history import (
+    EncounterCatalogDiscovery,
+    EncounterDiscoveryService,
+    HistoricalEncounterCatalog,
+    NoCatalogEncounters,
+    NoCompletedEncounterPulls,
+    discovery_source_fingerprint,
+)
 from app.web_requests.warcraft_logs import WCLClient
 from app.web_requests.warcraft_logs.errors import (
     AuthenticationError, InvalidReportReference, MalformedResponse, PaginationError,
@@ -58,8 +70,14 @@ def _friendly_error(exc):
         return "Pull Coach's Warcraft Logs connection is not configured correctly."
     if isinstance(exc, (TransportError, MalformedResponse, PaginationError)):
         return "Warcraft Logs returned an error while I was loading that pull."
-    if isinstance(exc, (PullCoachConfigurationError, UnsupportedEncounter)):
+    if isinstance(exc, PullCoachConfigurationError):
+        return "Pull Coach is not configured to load mechanic definitions. Contact a bot administrator."
+    if isinstance(exc, UnsupportedEncounter):
         return "Pull Coach doesn't have mechanic definitions for that encounter yet."
+    if isinstance(exc, NoCompletedEncounterPulls):
+        return "That encounter has no completed pulls to inspect in this report."
+    if isinstance(exc, MechanicsStoreError):
+        return "Pull Coach discovery storage is unavailable. Contact a bot administrator."
     if isinstance(exc, NoCompletedPulls):
         return "That report has no completed boss pulls to analyze."
     if isinstance(exc, FightNotFound):
@@ -86,11 +104,13 @@ class PullCoachDetailsView(discord.ui.View):
 class HistoricalEncounterPicker(discord.ui.View):
     PAGE_SIZE = 25
 
-    def __init__(self, catalog: HistoricalEncounterCatalog, owner_id: int, on_selection):
+    def __init__(self, catalog: HistoricalEncounterCatalog, owner_id: int, on_selection,
+                 on_unsupported_selection=None):
         super().__init__(timeout=300)
         self.catalog = catalog
         self.owner_id = owner_id
         self.on_selection = on_selection
+        self.on_unsupported_selection = on_unsupported_selection
         self.page = 0
         self.completed = False
         self.expired = False
@@ -162,9 +182,6 @@ class HistoricalEncounterPicker(discord.ui.View):
         if summary is None:
             await interaction.response.send_message("That encounter is no longer available.", ephemeral=True)
             return
-        if not summary.mechanics_supported:
-            await interaction.response.send_message(_friendly_error(UnsupportedEncounter()), ephemeral=True)
-            return
         self.completed = True
         self.stop()
         self._disable_items()
@@ -174,6 +191,18 @@ class HistoricalEncounterPicker(discord.ui.View):
         except (discord.HTTPException, discord.NotFound):
             return
         selection = HistoricalEncounterSelection(self.catalog.report_code, self.catalog.source_url, encounter_id)
+        if not summary.mechanics_supported:
+            try:
+                if self.on_unsupported_selection is None:
+                    await interaction.followup.send(
+                        "Pull Coach discovery is not configured. Contact a bot administrator.", ephemeral=True)
+                    return
+                result = self.on_unsupported_selection(selection, summary, interaction)
+                if inspect.isawaitable(result):
+                    await result
+            except Exception:
+                await interaction.followup.send("I couldn't inspect that encounter. Please try again later.", ephemeral=True)
+            return
         try:
             result = self.on_selection(selection, interaction)
             if inspect.isawaitable(result):
@@ -206,12 +235,54 @@ class HistoricalEncounterPicker(discord.ui.View):
 
 
 class PullCoach(commands.Cog):
-    def __init__(self, bot, workflow_factory=None, presenter=None, catalog_factory=None, selection_handler=None):
+    def __init__(self, bot, workflow_factory=None, presenter=None, catalog_factory=None, selection_handler=None,
+                 discovery_factory=None, mechanics_store_factory=None):
         self.bot = bot
         self.workflow_factory = workflow_factory or _configured_workflow
         self.presenter = presenter or PullCoachPresenter()
         self.catalog_factory = catalog_factory or _configured_catalog_discovery
         self.selection_handler = selection_handler or self._handle_historical_selection
+        self.discovery_factory = discovery_factory or (
+            lambda writer: EncounterDiscoveryService(WCLClient(), writer))
+        self.mechanics_store_factory = mechanics_store_factory or self._configured_discovery_store
+
+    @staticmethod
+    def _configured_discovery_store():
+        root = os.getenv("PULL_COACH_MECHANICS_ROOT")
+        if not root:
+            raise PullCoachConfigurationError("directory-backed mechanics storage is required for discovery")
+        store = DirectoryMechanicsStore(root)
+        if not store.root.is_dir() or not os.access(store.root, os.W_OK | os.X_OK):
+            raise PullCoachConfigurationError("configured mechanics storage is not writable")
+        return store
+
+    async def _handle_unsupported_selection(self, selection, summary, interaction):
+        try:
+            store = self.mechanics_store_factory()
+            fingerprint = discovery_source_fingerprint(selection.source_url or selection.report_code)
+            artifact = await asyncio.to_thread(store.read_discovery, selection.encounter_id)
+            expected_fights = tuple(sorted(summary.fight_ids))
+            provenance = artifact.provenance if artifact else ()
+            existing_fights = tuple(sorted(item.fight_id for item in provenance))
+            reused = (artifact is not None and bool(provenance)
+                      and all(item.source_fingerprint == fingerprint for item in provenance)
+                      and existing_fights == expected_fights)
+            if not reused:
+                service = self.discovery_factory(store)
+                artifact = await asyncio.to_thread(service.discover,
+                    selection.source_url or selection.report_code, selection.encounter_id)
+            message = (
+                f"Pull Coach hasn't verified {summary.name} yet.\n"
+                f"I inspected {len(artifact.provenance)} completed pulls and found "
+                f"{len(artifact.candidates)} mechanic/ability candidates.\n"
+                "The encounter has been queued for mechanic review.")
+            await interaction.followup.send(message, ephemeral=True)
+        except Exception as exc:
+            log.error("Pull Coach discovery failed encounter=%s stage=discovery error_type=%s",
+                      selection.encounter_id, type(exc).__name__)
+            message = ("Pull Coach discovery storage is not configured correctly. Contact a bot administrator."
+                       if isinstance(exc, PullCoachConfigurationError) else _friendly_error(exc))
+            await interaction.followup.send(message, ephemeral=True)
 
     async def _handle_historical_selection(self, selection, interaction):
         code = selection.report_code
@@ -261,7 +332,8 @@ class PullCoach(commands.Cog):
             code = parse_report_code(report)
             discovery = self.catalog_factory()
             catalog = await asyncio.to_thread(discovery.discover, report)
-            view = HistoricalEncounterPicker(catalog, ctx.author.id, self.selection_handler)
+            view = HistoricalEncounterPicker(
+                catalog, ctx.author.id, self.selection_handler, self._handle_unsupported_selection)
             message = await ctx.followup.send("Choose a boss encounter:", view=view, wait=True)
             view.message = message
         except Exception as exc:
