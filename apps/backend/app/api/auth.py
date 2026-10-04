@@ -6,17 +6,18 @@ import json
 import logging
 import os
 import secrets
-import sqlite3
-import time
-from pathlib import Path
+from datetime import timedelta
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from fastapi import APIRouter, Cookie, Header, HTTPException, Query, Response
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 
 from app.api.schemas import AuthSessionResponse, LogoutResponse
+from app.api.dependencies import get_db_session
+from app.api import auth_repository as repository
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 load_dotenv()
@@ -25,21 +26,6 @@ OAUTH_STATE_COOKIE = "group_raiding_oauth_state"
 SESSION_TTL = 60 * 60 * 24 * 14
 STATE_TTL = 600
 logger = logging.getLogger(__name__)
-
-
-def _db_path() -> str:
-    return os.getenv("AUTH_SESSION_DATABASE", "./data/auth_sessions.sqlite3")
-
-
-def _connect() -> sqlite3.Connection:
-    path = _db_path()
-    if path != ":memory:":
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(path, timeout=10)
-    db.execute("CREATE TABLE IF NOT EXISTS web_sessions (token_hash TEXT PRIMARY KEY, csrf_token TEXT NOT NULL, user_json TEXT NOT NULL, expires_at INTEGER NOT NULL)")
-    db.execute("CREATE TABLE IF NOT EXISTS oauth_states (state_hash TEXT PRIMARY KEY, return_to TEXT NOT NULL, expires_at INTEGER NOT NULL)")
-    db.commit()
-    return db
 
 
 def _hash(value: str) -> str:
@@ -133,26 +119,29 @@ def _set_cookie(response: Response, token: str, secure: bool) -> None:
 
 
 @router.get("/session", response_model=AuthSessionResponse, operation_id="getAuthSession")
-def session(session_cookie: str | None = Cookie(None, alias=SESSION_COOKIE)) -> AuthSessionResponse:
+def session(session_cookie: str | None = Cookie(None, alias=SESSION_COOKIE), db: Session = Depends(get_db_session)) -> AuthSessionResponse:
     if not session_cookie:
         return AuthSessionResponse(authenticated=False)
-    with _connect() as db:
-        row = db.execute("SELECT csrf_token,user_json,expires_at FROM web_sessions WHERE token_hash=?", (_hash(session_cookie),)).fetchone()
-        if not row or row[2] <= int(time.time()):
-            if row:
-                db.execute("DELETE FROM web_sessions WHERE token_hash=?", (_hash(session_cookie),))
-            return AuthSessionResponse(authenticated=False)
-        user = json.loads(row[1])
-        return AuthSessionResponse(authenticated=True, **user, csrf_token=row[0])
+    row = repository.find_session(db, _hash(session_cookie), repository.utc_now())
+    if not row:
+        return AuthSessionResponse(authenticated=False)
+    stored, identity = row
+    return AuthSessionResponse(authenticated=True, discord_user_id=identity.discord_user_id,
+                               username=identity.username, display_name=identity.display_name,
+                               avatar_url=identity.avatar_url, csrf_token=stored.csrf_token)
 
 
 @router.get("/discord/login", status_code=302, operation_id="loginWithDiscord")
-def discord_login(return_to: str | None = Query(None)) -> RedirectResponse:
+def discord_login(return_to: str | None = Query(None), db: Session = Depends(get_db_session)) -> RedirectResponse:
     client_id, _, callback, _, secure = _settings()
     state = secrets.token_urlsafe(32)
-    with _connect() as db:
-        db.execute("DELETE FROM oauth_states WHERE expires_at<=?", (int(time.time()),))
-        db.execute("INSERT INTO oauth_states VALUES (?,?,?)", (_hash(state), _safe_return_to(return_to), int(time.time()) + STATE_TTL))
+    try:
+        db.query(repository.OAuthState).filter(repository.OAuthState.expires_at <= repository.utc_now()).delete()
+        repository.create_state(db, _hash(state), _safe_return_to(return_to), repository.utc_now() + timedelta(seconds=STATE_TTL))
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     params = urlencode({"client_id": client_id, "redirect_uri": callback, "response_type": "code",
                         "scope": "identify guilds.members.read", "state": state})
     response = RedirectResponse(f"https://discord.com/oauth2/authorize?{params}", status_code=302)
@@ -164,7 +153,7 @@ def discord_login(return_to: str | None = Query(None)) -> RedirectResponse:
 @router.get("/discord/callback", status_code=302, operation_id="discordCallback", include_in_schema=True)
 def discord_callback(code: str | None = None, state: str | None = None,
                      state_cookie: str | None = Cookie(None, alias=OAUTH_STATE_COOKIE),
-                     error: str | None = None) -> Response:
+                     error: str | None = None, db: Session = Depends(get_db_session)) -> Response:
     client_id, client_secret, callback, guild_id, secure = _settings()
 
     def invalid_state_redirect() -> RedirectResponse:
@@ -174,11 +163,14 @@ def discord_callback(code: str | None = None, state: str | None = None,
 
     if not state or not state_cookie or not secrets.compare_digest(state, state_cookie):
         return invalid_state_redirect()
-    with _connect() as db:
-        row = db.execute("SELECT return_to FROM oauth_states WHERE state_hash=? AND expires_at>?", (_hash(state), int(time.time()))).fetchone()
-        db.execute("DELETE FROM oauth_states WHERE state_hash=?", (_hash(state),))
-        if not row:
-            return invalid_state_redirect()
+    try:
+        return_to = repository.consume_state(db, _hash(state), repository.utc_now())
+        db.commit()  # consumed before provider requests; failed exchanges cannot replay state
+    except Exception:
+        db.rollback()
+        return invalid_state_redirect()
+    if not return_to:
+        return invalid_state_redirect()
     if error:
         redirect = RedirectResponse("/?auth=cancelled", status_code=302)
         redirect.delete_cookie(OAUTH_STATE_COOKIE, path="/", secure=secure, httponly=True, samesite="lax")
@@ -214,14 +206,18 @@ def discord_callback(code: str | None = None, state: str | None = None,
                 "avatar_url": f"https://cdn.discordapp.com/avatars/{user['id']}/{avatar}.png" if avatar else None}
     raw_session, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
     try:
-        with _connect() as db:
-            db.execute("INSERT INTO web_sessions VALUES (?,?,?,?)", (_hash(raw_session), csrf, json.dumps(identity), int(time.time()) + SESSION_TTL))
+        web_identity = repository.upsert_identity(db, identity["discord_user_id"], identity["username"],
+                                                  identity["display_name"], identity["avatar_url"])
+        repository.create_session(db, web_identity, _hash(raw_session), csrf,
+                                  repository.utc_now() + timedelta(seconds=SESSION_TTL))
+        db.commit()
     except Exception as exc:
+        db.rollback()
         _log_callback_failure("session_persistence", exc)
         redirect = RedirectResponse("/?auth=error", status_code=302)
         redirect.delete_cookie(OAUTH_STATE_COOKIE, path="/", secure=secure, httponly=True, samesite="lax")
         return redirect
-    redirect = RedirectResponse(_safe_return_to(row[0]), status_code=302)
+    redirect = RedirectResponse(_safe_return_to(return_to), status_code=302)
     redirect.delete_cookie(OAUTH_STATE_COOKIE, path="/", secure=secure, httponly=True, samesite="lax")
     _set_cookie(redirect, raw_session, secure)
     return redirect
@@ -229,17 +225,21 @@ def discord_callback(code: str | None = None, state: str | None = None,
 
 @router.post("/logout", response_model=LogoutResponse, operation_id="logout")
 def logout(response: Response, session_cookie: str | None = Cookie(None, alias=SESSION_COOKIE),
-           x_csrf_token: str | None = Header(None)) -> LogoutResponse:
+           x_csrf_token: str | None = Header(None), db: Session = Depends(get_db_session)) -> LogoutResponse:
     _, _, _, _, secure = _settings()
     if not session_cookie:
         raise HTTPException(401, "Session required")
     token_hash = _hash(session_cookie)
-    with _connect() as db:
-        row = db.execute("SELECT csrf_token FROM web_sessions WHERE token_hash=? AND expires_at>?", (token_hash, int(time.time()))).fetchone()
-        if not row:
-            raise HTTPException(401, "Session expired")
-        if not x_csrf_token or not secrets.compare_digest(row[0], x_csrf_token):
-            raise HTTPException(403, "Invalid CSRF token")
-        db.execute("DELETE FROM web_sessions WHERE token_hash=?", (token_hash,))
+    row = repository.find_session(db, token_hash, repository.utc_now())
+    if not row:
+        raise HTTPException(401, "Session expired")
+    if not x_csrf_token or not secrets.compare_digest(row[0].csrf_token, x_csrf_token):
+        raise HTTPException(403, "Invalid CSRF token")
+    try:
+        repository.invalidate_session(db, token_hash, repository.utc_now())
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     response.delete_cookie(SESSION_COOKIE, path="/", secure=secure, httponly=True, samesite="lax")
     return LogoutResponse(signed_out=True)

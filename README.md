@@ -87,9 +87,12 @@ from the browser. Required backend settings are in `apps/backend/.env.example`:
   `${PUBLIC_APP_URL}/api/auth/discord/callback`.
 - `DISCORD_GUILD_ID`: community whose current-user membership may be read. It
   does not grant application permissions.
-- `AUTH_SESSION_DATABASE`: durable SQLite file for opaque session hashes and
-  one-use OAuth state. Ensure its directory is writable and persisted/backed up
-  across restarts in deployed environments.
+- `SQLALCHEMY_DATABASE_USER`, `SQLALCHEMY_DATABASE_PASSWORD`,
+  `SQLALCHEMY_DATABASE_HOST`, `SQLALCHEMY_DATABASE_PORT`, and
+  `SQLALCHEMY_DATABASE_DB`: PostgreSQL connection settings shared with the
+  application. Auth identities, sessions, and one-use OAuth state are stored
+  there; the old development SQLite sessions are disposable and users must sign
+  in again after upgrading.
 
 Register `http://localhost:3000/api/auth/discord/callback` as the redirect URI
 in the Discord Developer Portal for local use. For production, register the
@@ -104,17 +107,53 @@ random opaque cookies, stores only a SHA-256 token hash, and invalidates session
 server-side on logout. Discord OAuth tokens are transient server-side only and
 are not persisted. This web OAuth client is independent of `DISCORD_BOT_TOKEN`.
 
-Start local testing in separate terminals:
+There is no checked-in PostgreSQL compose/service configuration. For a local
+development-only server, start a disposable PostgreSQL container (or connect to
+your existing development PostgreSQL instance):
 
 ```bash
-# apps/backend/.env: fill the OAuth client ID/secret and Discord guild ID
+docker run -d --name group-raiding-postgres \
+  -e POSTGRES_USER=group_raiding -e POSTGRES_PASSWORD=local-dev-only \
+  -e POSTGRES_DB=group_raiding -p 5432:5432 postgres:16
+until docker exec group-raiding-postgres pg_isready -U group_raiding -d group_raiding; do sleep 1; done
+```
+
+Set these **PostgreSQL** values (not Discord OAuth credentials) in
+`apps/backend/.env`:
+
+```dotenv
+SQLALCHEMY_DATABASE_USER=group_raiding
+SQLALCHEMY_DATABASE_PASSWORD=local-dev-only
+SQLALCHEMY_DATABASE_HOST=127.0.0.1
+SQLALCHEMY_DATABASE_PORT=5432
+SQLALCHEMY_DATABASE_DB=group_raiding
+```
+
+Keep the database container running across API restarts. Apply migrations:
+
+```bash
+cd apps/backend
+uv run alembic upgrade head
+```
+
+Configure `DISCORD_OAUTH_CLIENT_ID`, `DISCORD_OAUTH_CLIENT_SECRET`, and
+`DISCORD_GUILD_ID` separately as Discord OAuth credentials. Register the
+localhost callback URI, then start API and frontend in separate repository-root
+terminals:
+
+```bash
 pnpm backend:api
+```
+
+```bash
 pnpm web:dev
 ```
 
 Open `http://localhost:3000`, select **Sign in with Discord**, authorize, and
-verify the return to the app. Refresh to verify session restoration; sign out
-and verify the signed-out view. Automated auth tests use a fake Discord transport
+verify the return to the app. Refresh to verify session restoration, restart the
+backend and refresh again to verify PostgreSQL durability, then sign out and
+verify the signed-out view (the previous session cookie must remain invalid).
+Automated auth tests use a fake Discord transport
 and need no credentials. API contracts are `GET /api/auth/session`,
 `GET /api/auth/discord/login?return_to=/safe/path`,
 `GET /api/auth/discord/callback`, and `POST /api/auth/logout` with the session
