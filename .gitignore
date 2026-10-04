@@ -29,8 +29,11 @@ apps/backend/data/*.json
 /node_modules/
 **/node_modules/
 **/.next/
+apps/web/next-env.d.ts
 **/dist/
 **/coverage/
+**/test-results/
+**/*.tsbuildinfo
 pnpm-debug.log*
 
 # Runtime-generated Pull Coach lifecycle artifacts may contain private data.

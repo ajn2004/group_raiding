@@ -39,12 +39,11 @@ Install JavaScript workspace dependencies from the repository root with:
 pnpm install
 ```
 
-Once the Next.js app is introduced, use the root convenience scripts
-`pnpm web:dev`, `pnpm web:test`, and `pnpm web:build` (or run the corresponding
-script directly in `apps/web`). These are independent services: start the bot
-with `cd apps/backend && uv run python main.py` and start the web client with `pnpm web:dev` in a
-separate terminal. The web client will call the backend through its HTTP API;
-running the browser app does not implicitly start the Discord bot or API.
+Start the web client with `pnpm web:dev` (or `pnpm --filter @group-raiding/web dev`).
+The root `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` commands
+(also available as `pnpm web:lint`, `pnpm web:typecheck`, `pnpm web:test`, and
+`pnpm web:build`) run the web quality checks. Web and backend API are independent services;
+starting the browser app does not implicitly start the bot or API.
 
 ### HTTP API development
 
@@ -57,6 +56,12 @@ pnpm backend:api
 pnpm web:dev
 ```
 
+The Next.js `/api/*` rewrite defaults to `http://127.0.0.1:8000`. Set
+`API_PROXY_TARGET` when the Python API listens elsewhere; this is a server-side
+Next.js environment variable and the browser always calls its same-origin `/api`
+path. The checked-in schema and generated TypeScript definitions are refreshed
+with `pnpm backend:openapi` followed by `pnpm web:generate-api`.
+
 The health endpoint is `GET /api/healthz`; interactive docs are at
 `/api/docs`. Export the reproducible OpenAPI contract from the repository root with:
 
@@ -68,6 +73,11 @@ The generated document belongs in
 `apps/web/src/lib/api/generated/openapi.json`. Derived TypeScript API types
 should live alongside it in `apps/web/src/lib/api/generated/` and be generated
 from this contract rather than duplicating backend response definitions.
+
+The Playwright smoke test starts the local FastAPI app and Next.js app, then
+checks the real browser-to-Python `/api/healthz` request through the same-origin
+rewrite. It needs no external services. Install its browser once with
+`pnpm --filter @group-raiding/web exec playwright install chromium`.
 
 The legacy bot uses `DISCORD_BOT_TOKEN` and the `SQLALCHEMY_DATABASE_*` values
 for database-backed features. Pull Coach's offline demo does not need Discord,
