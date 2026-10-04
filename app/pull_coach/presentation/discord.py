@@ -25,11 +25,16 @@ class PullCoachPresenter:
         duration = _duration(pull)
         if pull.state == PullState.KILL:
             status = "Kill"
+            if result.historical_context is not None and pull.boss_percent is not None:
+                status += f" · Boss {pull.boss_percent:g}%"
         else:
             status = "Wipe" + (f" · {pull.boss_percent:g}% remaining" if pull.boss_percent is not None else "")
         if duration:
             status += f" · {duration}"
         identity = f"Pull {pull.pull_number} · Fight {pull.fight_id} · {status}"
+        historical = result.historical_context
+        if historical is not None:
+            identity = f"Historical sample · {historical.completed_pull_count} completed pulls analyzed\nTarget: {identity}"
         fields = []
         def add(name, values):
             values = [_candidate(value) for value in values if value and value.text.strip()]
@@ -44,7 +49,8 @@ class PullCoachPresenter:
         add("Raid", public.raid_actions)
         details = _details(result)
         # Calculate against final clipped aggregate text, as Discord does.
-        title = _clip(f"Pull Coach — {pull.encounter.name}", 256)
+        title = _clip(f"Historical Pull Coach — {pull.encounter.name}" if historical is not None
+                      else f"Pull Coach — {pull.encounter.name}", 256)
         description = _clip(identity, 4096)
         footer = _clip("Pull Coach", 2048)
         base = len(title) + len(description) + len(result.source_url) + len(footer)

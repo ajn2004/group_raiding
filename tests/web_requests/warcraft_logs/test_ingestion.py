@@ -59,6 +59,38 @@ def test_boss_percent_uses_boss_percentage_not_fight_percentage():
     assert result.pull.boss_percent == 37.2
 
 
+def test_encounter_identity_and_pull_number_use_canonical_numeric_id():
+    fights = [
+        {"id": 3, "encounterID": "042", "name": "Boss", "startTime": 10, "endTime": 20},
+        {"id": 8, "encounterID": 42, "name": "Boss", "startTime": 30, "endTime": 40},
+    ]
+    snapshot = WCLSnapshot({"fights": fights, "masterData": {"actors": [], "abilities": []}}, {
+        3: [{"data": [], "nextPageTimestamp": None}],
+        8: [{"data": [], "nextPageTimestamp": None}],
+    })
+    client = WCLClient(WCLConfig())
+    first = client.ingest_fight(snapshot, "ABC123", 3).pull
+    second = client.ingest_fight(snapshot, "ABC123", 8).pull
+    assert first.encounter.encounter_id == second.encounter.encounter_id == "42"
+    assert (first.pull_number, second.pull_number) == (1, 2)
+
+
+def test_equal_start_fights_get_sequential_pull_numbers_by_fight_id():
+    fights = [
+        {"id": 9, "encounterID": 42, "name": "Boss", "startTime": 1000, "endTime": 1200},
+        {"id": 3, "encounterID": "042", "name": "Boss", "startTime": 1000, "endTime": 1100},
+    ]
+    snapshot = WCLSnapshot({"fights": fights, "masterData": {"actors": [], "abilities": []}}, {
+        3: [{"data": [], "nextPageTimestamp": None}],
+        9: [{"data": [], "nextPageTimestamp": None}],
+    })
+    client = WCLClient(WCLConfig())
+    earlier = client.ingest_fight(snapshot, "ABC123", 3).pull
+    later = client.ingest_fight(snapshot, "ABC123", 9).pull
+    assert (earlier.encounter.encounter_id, earlier.pull_number) == ("42", 1)
+    assert (later.encounter.encounter_id, later.pull_number) == ("42", 2)
+
+
 def test_interrupt_and_dispel_preserve_secondary_ability():
     report = {"fights": [{"id": 7, "encounterID": 42, "name": "Boss", "startTime": 0,
         "endTime": 400}], "masterData": {"actors": [], "abilities": [

@@ -191,10 +191,12 @@ class HistoricalEncounterPicker(discord.ui.View):
         try:
             result = self.on_selection(selection, interaction)
             if inspect.isawaitable(result):
-                await result
+                result = await result
         except Exception:
             # The handoff implementation owns downstream error reporting; never expose its details.
             await interaction.followup.send("I couldn't start Pull Coach for that encounter.", ephemeral=True)
+            return
+        if result is False:
             return
         await interaction.followup.send(f"Selected {summary.name} ({summary.pull_count} completed pulls).", ephemeral=True)
 
@@ -223,7 +225,25 @@ class PullCoach(commands.Cog):
         self.workflow_factory = workflow_factory or _configured_workflow
         self.presenter = presenter or PullCoachPresenter()
         self.catalog_factory = catalog_factory or _configured_catalog_discovery
-        self.selection_handler = selection_handler or (lambda selection, interaction: None)
+        self.selection_handler = selection_handler or self._handle_historical_selection
+
+    async def _handle_historical_selection(self, selection, interaction):
+        code = selection.report_code
+        try:
+            workflow = self.workflow_factory()
+            reference = selection.source_url or selection.report_code
+            result = await asyncio.to_thread(workflow.run_encounter_sample, reference, selection.encounter_id)
+            payload = self.presenter.present(result)
+            channel = getattr(interaction, "channel", None)
+            if channel is None:
+                raise RuntimeError("selection channel unavailable")
+            await channel.send(embed=to_discord_embed(payload), view=PullCoachDetailsView(payload.details))
+            return True
+        except Exception as exc:
+            log.error("Pull Coach historical failed report=%s encounter=%s stage=sample error_type=%s",
+                      code, selection.encounter_id, type(exc).__name__)
+            await interaction.followup.send(_friendly_error(exc), ephemeral=True)
+            return False
 
     @discord.slash_command(name="pullcoach", description="Analyze a Warcraft Logs boss pull")
     async def pullcoach(self, ctx: discord.ApplicationContext,

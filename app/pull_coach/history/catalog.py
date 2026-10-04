@@ -6,6 +6,7 @@ from numbers import Real
 
 from app.pull_coach.workflow import (encounter_identity, is_boss_fight,
                                      normalize_encounter_id, source_report_url)
+from app.pull_coach.identity import fight_sort_key
 from app.web_requests.warcraft_logs import WCLClient, parse_report_code
 from app.web_requests.warcraft_logs.errors import MalformedResponse
 
@@ -33,15 +34,6 @@ class HistoricalEncounterCatalog:
     report_code: str
     source_url: str
     encounters: tuple[HistoricalEncounterSummary, ...]
-
-
-def _fight_sort_key(fight):
-    fight_id = str(fight["id"])
-    try:
-        tie_break = (0, int(fight_id))
-    except ValueError:
-        tie_break = (1, fight_id)
-    return fight["startTime"], tie_break
 
 
 def _valid_percent(value):
@@ -79,10 +71,10 @@ class EncounterCatalogDiscovery:
         if not groups:
             raise NoCatalogEncounters("report has no completed boss encounter fights")
 
-        ordered = sorted(groups.items(), key=lambda item: _fight_sort_key(min(item[1], key=_fight_sort_key)))
+        ordered = sorted(groups.items(), key=lambda item: fight_sort_key(min(item[1], key=fight_sort_key)))
         summaries = []
         for encounter_id, group in ordered:
-            chronology = sorted(group, key=_fight_sort_key)
+            chronology = sorted(group, key=fight_sort_key)
             latest = chronology[-1]
             encounter = encounter_identity(chronology[0])
             definitions = self.mechanic_registry.for_encounter(encounter) if self.mechanic_registry else ()
