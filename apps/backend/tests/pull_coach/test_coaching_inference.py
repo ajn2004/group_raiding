@@ -5,12 +5,41 @@ import pytest
 
 from app.pull_coach.coaching.inference import (
     InvalidCoachingResponse, OpenRouterConfig, OpenRouterInferenceProvider, ProviderRequestError,
+    RESPONSE_SCHEMA, response_schema_for_context,
     UnsupportedOutputSchema,
 )
 
 
-CONTEXT = {"insights": [{"identity": {"group": "mechanic", "id": "avoid"}}],
+CONTEXT = {"insights": [{"identity": {"key": "mechanic:avoid", "group": "mechanic", "id": "avoid"}}],
            "roster": [{"playerId": 7, "name": "Player"}]}
+
+
+def assert_strict_object_schema(schema):
+    if schema.get("type") == "object":
+        assert set(schema.get("required", [])) == set(schema.get("properties", {}))
+    for value in schema.get("properties", {}).values():
+        if isinstance(value, dict):
+            assert_strict_object_schema(value)
+    for value in schema.get("$defs", {}).values():
+        if isinstance(value, dict):
+            assert_strict_object_schema(value)
+
+
+def test_openrouter_response_schema_is_strict_compatible():
+    assert_strict_object_schema(RESPONSE_SCHEMA)
+
+
+def test_context_schema_only_allows_canonical_citations_and_roster_players():
+    context = {"insights": [{"identity": {"key": "1507:S"}}, {"identity": {"key": "1507:2"}}],
+               "roster": [{"playerId": 7}, {"playerId": "8"}]}
+    schema = response_schema_for_context(context)
+    props = schema["$defs"]["recommendation"]["properties"]
+    citation_enum = props["source_insight_keys"]["items"]["enum"]
+    assert citation_enum == ["1507:2", "1507:S"]
+    assert schema["properties"]["candidate_source_insight_keys"]["items"]["enum"] == citation_enum
+    assert "title" not in citation_enum and "values.totalEvents" not in citation_enum
+    assert props["player_id"]["enum"] == ["7", "8", None]
+    assert_strict_object_schema(schema)
 
 
 def revision(model="vendor/model-a", system="system", template="Context: {context}", **overrides):
@@ -56,8 +85,12 @@ def test_profile_revision_drives_model_and_prompts_and_returns_provider_metadata
     result = provider.infer(CONTEXT, revision("vendor/model-b", "system b", "User b {context}"))
     sent = transport.calls[0][1]["json"]
     assert sent["model"] == "vendor/model-b"
-    assert sent["messages"] == [{"role": "system", "content": "system b"},
-                                {"role": "user", "content": "User b {context}\n\nCoaching context:\n" + json.dumps(CONTEXT, sort_keys=True)}]
+    user_message = sent["messages"][1]["content"]
+    assert sent["messages"][0] == {"role": "system", "content": "system b"}
+    assert user_message.startswith("User b {context}\n")
+    assert "exact insights[].identity.key values" in user_message
+    assert "Do not cite JSON field names" in user_message
+    assert json.dumps(CONTEXT, sort_keys=True) in user_message
     assert sent["response_format"]["type"] == "json_schema"
     assert (result.provider_request_id, result.provider_response_id, result.usage, result.actual_model) == (
         "req-1", "resp-1", {"total_tokens": 12}, "actual/model")

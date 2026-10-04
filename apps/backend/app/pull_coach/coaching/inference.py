@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import copy
 import json
 import os
 import time
@@ -93,14 +94,14 @@ RESPONSE_SCHEMA: dict[str, Any] = {
     "properties": {
         "recommendations": {"type": "array", "items": {"$ref": "#/$defs/recommendation"}},
         "candidate_source_insight_keys": {"type": "array", "items": {"type": "string"}},
-    }, "required": ["recommendations"],
+    }, "required": ["recommendations", "candidate_source_insight_keys"],
     "$defs": {"recommendation": {"type": "object", "additionalProperties": False,
         "properties": {"scope": {"type": "string", "enum": ["raid", "player"]},
             "text": {"type": "string"}, "source_insight_keys": {"type": "array", "items": {"type": "string"}},
             "kind": {"type": "string", "enum": ["observation", "inference"]},
             "player_id": {"type": ["string", "null"]},
             "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}},
-        "required": ["scope", "text", "source_insight_keys", "kind", "player_id"]}},
+        "required": ["scope", "text", "source_insight_keys", "kind", "player_id", "confidence"]}},
 }
 
 OUTPUT_SCHEMAS = {
@@ -109,13 +110,36 @@ OUTPUT_SCHEMAS = {
 }
 
 
+def response_schema_for_context(context: dict[str, Any], schema: dict[str, Any] = RESPONSE_SCHEMA) -> dict[str, Any]:
+    """Constrain citations and player references to entities present in this context."""
+    result = copy.deepcopy(schema)
+    keys = sorted({insight["identity"]["key"] for insight in context.get("insights", [])
+                   if isinstance(insight, dict) and isinstance(insight.get("identity"), dict)
+                   and isinstance(insight["identity"].get("key"), str)})
+    allowed_keys: dict[str, Any] = {"type": "string", "enum": keys}
+    recommendation = result["$defs"]["recommendation"]["properties"]
+    recommendation["source_insight_keys"] = {"type": "array", "minItems": 1, "items": copy.deepcopy(allowed_keys)}
+    result["properties"]["candidate_source_insight_keys"] = {"type": "array", "items": copy.deepcopy(allowed_keys)}
+    roster = context.get("roster", [])
+    if context.get("player") is not None:
+        roster = [context["player"]]
+    player_ids = sorted({str(player["playerId"]) for player in roster
+                         if isinstance(player, dict) and player.get("playerId") is not None})
+    recommendation["player_id"] = {"type": ["string", "null"], "enum": [*player_ids, None]}
+    return result
+
+
 def build_coaching_messages(context: dict[str, Any], profile_revision: Any) -> list[dict[str, str]]:
     """Construct the exact prompt messages sent to the inference provider."""
     serialized = json.dumps(context, sort_keys=True, ensure_ascii=False, allow_nan=False)
     return [
         {"role": "system", "content": profile_revision.system_prompt},
         {"role": "user", "content": profile_revision.user_prompt_template +
-         "\n\nCoaching context:\n" + serialized},
+         "\n\nEvery recommendation must cite one or more exact insights[].identity.key values in "
+         "source_insight_keys. Do not cite JSON field names or paths such as title, details, or values.totalEvents.\n"
+         'Use scope="raid" for advice directed at the raid as a whole; player_id must be null. '
+         'Use scope="player" only when advice applies to one specific player; player_id must be that player\'s playerId.\n\n'
+         "Coaching context:\n" + serialized},
     ]
 
 
@@ -172,9 +196,10 @@ class OpenRouterInferenceProvider:
     def infer(self, context: dict[str, Any], profile_revision: Any) -> CoachingInferenceResult:
         if getattr(profile_revision, "provider", None) != self.provider_name:
             raise ProviderRequestError("profile revision provider is not openrouter")
-        schema = OUTPUT_SCHEMAS.get(getattr(profile_revision, "output_schema_version", None))
-        if schema is None:
+        base_schema = OUTPUT_SCHEMAS.get(getattr(profile_revision, "output_schema_version", None))
+        if base_schema is None:
             raise UnsupportedOutputSchema("profile revision output schema is not supported")
+        schema = response_schema_for_context(context, base_schema)
         model = profile_revision.model_slug
         body: dict[str, Any] = {"model": model, "messages": build_coaching_messages(context, profile_revision)}
         if profile_revision.temperature is not None:
