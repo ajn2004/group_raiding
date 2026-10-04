@@ -49,6 +49,8 @@ def test_canonical_loader_preserves_registry_version_into_matches(tmp_path):
     match = registry.match(EncounterIdentity("boss-1", "Example Encounter"),
                           NormalizedEvent(1, EventType.DAMAGE, "e", ability_id=42))[0]
     assert registry.registry_version == match.registry_version == "7"
+    assert match.source_artifact == str(path)
+    assert match.source_registry_version == "7"
 
 
 def test_reference_wcl_snapshot_ingests_and_matches_mechanic():

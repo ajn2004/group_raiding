@@ -21,7 +21,9 @@ class UnsupportedMechanicSchemaVersion(MechanicSchemaError):
     """No loader is available for the requested mechanic schema version."""
 
 
-def definitions_from_dict(data: dict[str, Any]) -> tuple[MechanicRule, ...]:
+def definitions_from_dict(
+    data: dict[str, Any], *, source_artifact: str | None = None,
+) -> tuple[MechanicRule, ...]:
     if not isinstance(data, dict):
         raise MechanicSchemaError("mechanic document must be a JSON object")
     version = data.get("schema_version")
@@ -74,6 +76,8 @@ def definitions_from_dict(data: dict[str, Any]) -> tuple[MechanicRule, ...]:
                     _object_field(item, "exposure").get("event_types", ())}, key=lambda value: value.value)),
                 exposure_ability_ids=tuple(_object_field(item, "exposure").get("ability_ids", ())),
                 exposure_metadata_predicates=_object_field(item, "exposure").get("metadata_predicates", {}),
+                source_artifact=source_artifact,
+                source_registry_version=registry_version,
             ))
             for key, value in (rules[-1].metadata_predicates or {}).items():
                 if value is not None and not isinstance(value, (str, int, float, bool)):
@@ -97,9 +101,9 @@ def definitions_from_dict(data: dict[str, Any]) -> tuple[MechanicRule, ...]:
     return tuple(rules)
 
 
-def registry_from_dict(data: dict[str, Any]) -> MechanicRegistry:
+def registry_from_dict(data: dict[str, Any], *, source_artifact: str | None = None) -> MechanicRegistry:
     """Build a registry while retaining provenance from its source document."""
-    rules = definitions_from_dict(data)
+    rules = definitions_from_dict(data, source_artifact=source_artifact)
     return MechanicRegistry(rules, data.get("registry_version", str(SCHEMA_VERSION)))
 
 
@@ -124,6 +128,6 @@ def _read_document(path: str | Path) -> dict[str, Any]:
     return data
 
 
-def load_mechanic_registry(path: str | Path) -> MechanicRegistry:
+def load_mechanic_registry(path: str | Path, *, source_artifact: str | None = None) -> MechanicRegistry:
     """Load the canonical registry, including document registry-version provenance."""
-    return registry_from_dict(_read_document(path))
+    return registry_from_dict(_read_document(path), source_artifact=source_artifact or str(path))

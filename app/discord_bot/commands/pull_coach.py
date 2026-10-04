@@ -3,14 +3,13 @@ import asyncio
 from dataclasses import dataclass
 import inspect
 import logging
-import os
 
 import discord
 from discord.ext import commands
 
 from app.pull_coach.analysis import PullAnalyzer
 from app.pull_coach.coaching import CoachingSynthesizer
-from app.pull_coach.mechanics.loader import MechanicSchemaError, load_mechanic_registry
+from app.pull_coach.mechanics.store import configured_mechanics_registry
 from app.pull_coach.presentation import PullCoachPresenter, to_discord_embed
 from app.pull_coach.progression import ProgressionComparator
 from app.pull_coach.workflow import (
@@ -29,25 +28,12 @@ log = logging.getLogger(__name__)
 
 
 def _configured_workflow():
-    path = os.getenv("PULL_COACH_MECHANICS_FILE")
-    if not path:
-        raise PullCoachConfigurationError("mechanic definitions are not configured")
-    try:
-        analyzer = PullAnalyzer(load_mechanic_registry(path))
-    except (MechanicSchemaError, OSError) as exc:
-        raise PullCoachConfigurationError("configured mechanic definitions could not be loaded") from exc
+    analyzer = PullAnalyzer(configured_mechanics_registry())
     return PullCoachWorkflow(WCLClient(), analyzer, ProgressionComparator(), CoachingSynthesizer())
 
 
 def _configured_catalog_discovery():
-    path = os.getenv("PULL_COACH_MECHANICS_FILE")
-    if not path:
-        raise PullCoachConfigurationError("mechanic definitions are not configured")
-    try:
-        registry = load_mechanic_registry(path)
-    except (MechanicSchemaError, OSError) as exc:
-        raise PullCoachConfigurationError("configured mechanic definitions could not be loaded") from exc
-    return EncounterCatalogDiscovery(WCLClient(), registry)
+    return EncounterCatalogDiscovery(WCLClient(), configured_mechanics_registry())
 
 
 @dataclass(frozen=True)

@@ -21,6 +21,8 @@ class MechanicRule:
     exposure_event_types: tuple[EventType, ...] = ()
     exposure_ability_ids: tuple[int | str, ...] = ()
     exposure_metadata_predicates: Mapping[str, Any] | None = None
+    source_artifact: str | None = None
+    source_registry_version: str | None = None
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,8 @@ class MechanicMatch:
     registry_version: str
     weight: float
     relationships: Mapping[str, Any]
+    source_artifact: str | None = None
+    source_registry_version: str | None = None
 
 
 class MechanicRegistry:
@@ -71,6 +75,11 @@ class MechanicRegistry:
         """All configured definitions, in stable registry order."""
         return tuple(rule.definition for rule in self._rules)
 
+    @property
+    def rules(self) -> tuple[MechanicRule, ...]:
+        """All configured rules, in stable registry order."""
+        return self._rules
+
     def rules_for_encounter(self, encounter: EncounterIdentity) -> tuple[MechanicRule, ...]:
         """Return configured rule contracts for an encounter in stable order."""
         return tuple(rule for rule in self._rules
@@ -93,7 +102,8 @@ class MechanicRegistry:
                 continue
             matches.append(MechanicMatch(
                 definition, rule.definition_version, self.registry_version,
-                rule.weight, rule.relationships or {},
+                rule.weight, rule.relationships or {}, rule.source_artifact,
+                rule.source_registry_version,
             ))
         return tuple(sorted(matches, key=lambda match: (-match.weight, match.definition.mechanic_id)))
 
