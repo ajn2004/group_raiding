@@ -21,6 +21,8 @@ def _duration(pull):
 
 class PullCoachPresenter:
     def present(self, result):
+        if not hasattr(result, "selected_pull"):
+            return _present_coaching_run(result)
         pull, public = result.selected_pull, result.coaching.public
         duration = _duration(pull)
         if pull.state == PullState.KILL:
@@ -64,6 +66,22 @@ class PullCoachPresenter:
                 kept.append(field)
         return DiscordMessagePayload(DiscordEmbedPayload(
             title, description, result.source_url, tuple(kept), footer), details)
+
+
+def _present_coaching_run(result):
+    """Small source-neutral presentation until the richer coaching UI lands."""
+    response = result.coaching if isinstance(result.coaching, dict) else {}
+    recommendations = response.get("recommendations", [])
+    lines = [str(item.get("text", "")).strip() for item in recommendations
+             if isinstance(item, dict) and str(item.get("text", "")).strip()]
+    fields = ()
+    if lines:
+        fields = (DiscordEmbedField("Coaching recommendations",
+                                    _clip("\n".join(f"• {line}" for line in lines), 1024)),)
+    description = f"{result.encounter_name} · Fight {result.fight_id} · {result.source.title()} source"
+    return DiscordMessagePayload(DiscordEmbedPayload(
+        _clip(f"Pull Coach — {result.encounter_name}", 256), _clip(description, 4096),
+        result.source_url, fields), "\n".join(lines) or "No coaching recommendations.")
 
 
 def _details(result):

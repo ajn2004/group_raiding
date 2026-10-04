@@ -140,6 +140,7 @@ def test_unknown_encounter_discovery_review_promotion_and_historical_coaching(tm
     assert "SECRET_REPORT_CODE" in json.dumps(transport.report) + json.dumps(transport.event_pages)
     monkeypatch.setenv("PULL_COACH_MECHANICS_ROOT", str(root))
     monkeypatch.delenv("PULL_COACH_MECHANICS_FILE", raising=False)
+    monkeypatch.setenv("PULL_COACH_SOURCE", "legacy")
 
     # Normal catalog factory semantics see only verified lane; discovery itself
     # and a draft do not make the encounter selectable as supported.
