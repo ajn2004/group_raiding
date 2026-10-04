@@ -6,10 +6,13 @@ from .catalog import (
     HistoricalEncounterSummary,
     NoCatalogEncounters,
 )
+from .discovery import EncounterDiscoveryService, NoCompletedEncounterPulls
 
 __all__ = [
     "EncounterCatalogDiscovery",
     "HistoricalEncounterCatalog",
     "HistoricalEncounterSummary",
     "NoCatalogEncounters",
+    "EncounterDiscoveryService",
+    "NoCompletedEncounterPulls",
 ]

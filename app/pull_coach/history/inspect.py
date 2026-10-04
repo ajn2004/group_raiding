@@ -1,5 +1,16 @@
 """Deterministic factual summaries of saved Warcraft Logs snapshots."""
 from collections import Counter, defaultdict
+import re
+
+
+def _ability_identity(event):
+    """Stable factual identity shared by ability summaries and death windows."""
+    aid = event.get("abilityGameID") or (event.get("ability") or {}).get("guid")
+    if aid is not None:
+        value = str(aid)
+        return str(int(value)) if re.fullmatch(r"[0-9]+", value) else value
+    name = (event.get("ability") or {}).get("name")
+    return f"name:{' '.join(name.split()).casefold()}" if isinstance(name, str) and name.strip() else None
 
 
 def inspect_snapshot(snapshot, *, fight=None, fight_ids=None, replay_id=None, ability=None, name=None, event_type=None,
@@ -20,7 +31,7 @@ def inspect_snapshot(snapshot, *, fight=None, fight_ids=None, replay_id=None, ab
     counts = Counter(str(e.get("type", "unknown")).lower() for _, e in events)
     groups = defaultdict(list)
     for f, event in events:
-        aid = event.get("abilityGameID", (event.get("ability") or {}).get("guid"))
+        aid = event.get("abilityGameID") or (event.get("ability") or {}).get("guid")
         if aid is None and not (event.get("ability") or {}).get("name"):
             continue
         aname = (event.get("ability") or {}).get("name") or next(iter(sorted(abilities.get(str(aid), ()))), "Unknown ability")
@@ -55,11 +66,14 @@ def inspect_snapshot(snapshot, *, fight=None, fight_ids=None, replay_id=None, ab
              "source_actors": [{"actor_id": x[0], "name": x[1], "type": x[2], "count": n} for x,n in sorted(sources.items())],
              "targets": [{"actor_id": x[0], "name": x[1], "count": n} for x,n in sorted(targets.items())],
              "event_count": len(items), "damage": damage,
+             "identity": _ability_identity(items[0][1]),
+             "first_timestamp": min((e.get("timestamp") for _, e in items), default=None),
+             "last_timestamp": max((e.get("timestamp") for _, e in items), default=None),
              "per_fight": [{"fight_id": fid, "event_types": dict(sorted(cnt.items()))} for fid,cnt in sorted(by_fight.items(), key=lambda x: int(x[0]))]})
     for f, e in sorted(((f,e) for f,e in events if str(e.get("type", "")).lower() == "death"), key=lambda x:(x[0].get("id",0),x[1].get("timestamp",0))):
         ts=e.get("timestamp",0); history=[x for ff,x in events if ff.get("id")==f.get("id") and x.get("targetID")==e.get("targetID") and str(x.get("type", "")).lower()=="damage" and 0 <= ts-x.get("timestamp",ts) <= death_window_ms]
         result["deaths"].append({"fight_id":f.get("id"),"timestamp":ts,"target_id":e.get("targetID"),"pre_death_damage_window_ms":death_window_ms,
-                                "damage_events":[{"timestamp":x.get("timestamp"),"ability_id":x.get("abilityGameID"),"source_id":x.get("sourceID"),"target_id":x.get("targetID"),"amount":x.get("amount")} for x in history]})
+                                "damage_events":[{"timestamp":x.get("timestamp"),"ability_id":x.get("abilityGameID") or (x.get("ability") or {}).get("guid"),"ability_identity":_ability_identity(x),"source_id":x.get("sourceID"),"target_id":x.get("targetID"),"amount":x.get("amount")} for x in history]})
     return result
 
 
