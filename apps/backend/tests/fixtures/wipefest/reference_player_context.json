@@ -143,7 +143,8 @@
           "endUnit": 1,
           "startTimestamp": 0,
           "endTimestamp": 97058
-        }
+        },
+        "key": "raidwc:3"
       },
       "title": "Died to Sonic Pulse Sonic Pulse / Song of the Empress Song of the Empress 9 times.",
       "details": "",
@@ -253,7 +254,8 @@
           "endUnit": 1,
           "startTimestamp": 0,
           "endTimestamp": 97058
-        }
+        },
+        "key": "raidwc:6"
       },
       "title": "Used 10/10 Flask of the EarthFlask of the Warm SunFlask of Spring Blossoms Flasks and ate 7/10 Well FedWell FedWell FedWell Fed Food. Equipped 7.8 Enchants, 10.7 Gems, and 3.8 Tier Pieces with an average Item Level of 504.5.",
       "details": "Player Flask Food Enchants Gems Item Level T14 Readiness Chilatte Flask of the Earth Well Fed 11 505.6 5/5 9306 Medys Flask of the Earth Well Fed 11 504.4 5/5 9294 Onmyshaman Flask of the Warm Sun Well Fed 11 500.4 4/5 9254 Deego Flask of Spring Blossoms Well Fed 10 505.9 4/5 9209 Manaslu Flask of the Warm Sun Well Fed 10 505.4 4/5 9204 Klesha Flask of the Warm Sun Well Fed 11 503.9 4/5 9088 Gekkerless Flask of the Warm Sun 11 504.3 4/5 8942 Aleannora Flask of the Warm Sun 10 505.1 4/5 8651 Peterbread Flask of Spring Blossoms Well Fed 10 504.0 3/5 8590 Lustletsgo Flask of the Warm Sun 12 506.3 1/5 7862",
@@ -336,7 +338,8 @@
           "endUnit": 1,
           "startTimestamp": 0,
           "endTimestamp": 97058
-        }
+        },
+        "key": "raidwc:1"
       },
       "title": "Used 6 Virmen's Bite Potion of the Jade Serpent Combat or Mana Potions.",
       "details": "Deego (Virmen's Bite), Gekkerless (Pre-Potion of the Jade Serpent), Peterbread (Pre-Virmen's Bite), Lustletsgo (Pre-Potion of the Jade Serpent), Onmyshaman (Pre-Potion of the Jade Serpent), Klesha (Pre-Potion of the Jade Serpent), Aleannora (0), Chilatte (0), Medys (0), Manaslu (0).",
@@ -441,7 +444,8 @@
           "endUnit": 1,
           "startTimestamp": 0,
           "endTimestamp": 97058
-        }
+        },
+        "key": "raidwc:0"
       },
       "title": "Healed with Healthstone Healthstone / Healing Potions Healing Potions 0 times.",
       "details": null,
@@ -493,7 +497,8 @@
           "endUnit": 1,
           "startTimestamp": 0,
           "endTimestamp": 97058
-        }
+        },
+        "key": "1507:2"
       },
       "title": "Took a total of 583k from Pheromones of Zeal Pheromones of Zeal, reduced by getting to a platform faster.",
       "details": "",
@@ -620,7 +625,8 @@
           "endUnit": 1,
           "startTimestamp": 0,
           "endTimestamp": 97058
-        }
+        },
+        "key": "1507:3"
       },
       "title": "Hit by Sonic Ring Sonic Ring 2 times, taking moderate damage.",
       "details": "",
@@ -695,7 +701,8 @@
           "endUnit": 1,
           "startTimestamp": 0,
           "endTimestamp": 97058
-        }
+        },
+        "key": "1507:F"
       },
       "title": "Took a total of 6.2m damage from Imperial Vizier Zor'lok's Force and Verve Force and Verve, reduced by standing in a Noise Cancelling Noise Cancelling zone or using strong defensives.",
       "details": "",

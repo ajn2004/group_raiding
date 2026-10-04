@@ -62,7 +62,9 @@ def _interval(value: Any) -> dict[str, Any]:
 
 
 def _identity(insight: dict[str, Any]) -> dict[str, Any]:
-    return {"group": insight.get("group"), "id": insight.get("id"), "interval": _interval(insight.get("interval"))}
+    group, insight_id = insight.get("group"), insight.get("id")
+    return {"key": f"{group}:{insight_id}", "group": group, "id": insight_id,
+            "interval": _interval(insight.get("interval"))}
 
 
 def _stats(items: Any) -> list[dict[str, Any]]:
