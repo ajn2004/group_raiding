@@ -68,3 +68,50 @@ class OpenRouterModelsResponse(BaseModel):
     status: Literal["available", "degraded"]
     models: list[OpenRouterModelResponse]
     error: Literal["catalog_unavailable"] | None = None
+
+
+class CharacterLink(BaseModel):
+    id: int
+    name: str
+    class_name: str
+    server: str | None = None
+    region: str | None = None
+
+
+class ManagedPlayer(BaseModel):
+    id: int
+    name: str
+    discord_id: int
+    characters: list[CharacterLink]
+
+
+class PlayersResponse(BaseModel):
+    players: list[ManagedPlayer]
+
+
+class CharacterSource(BaseModel):
+    provider: str
+    report_code: str
+    fight_id: str
+    snapshot_id: int
+    actor_id: str | None = None
+
+
+class ObservedCharacter(CharacterLink):
+    class_name: str
+    linked_player_id: int | None = None
+    ambiguous: bool = False
+    sources: list[CharacterSource]
+
+
+class ObservedCharactersResponse(BaseModel):
+    characters: list[ObservedCharacter]
+
+
+class CharacterLinkRequest(BaseModel):
+    player_id: int
+
+
+class CharacterMutationResponse(BaseModel):
+    character: CharacterLink
+    player_id: int | None

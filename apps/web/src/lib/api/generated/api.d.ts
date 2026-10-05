@@ -123,6 +123,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/players": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Players */
+        get: operations["listPlayers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/players/characters/{character_id}/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Character Link */
+        put: operations["linkCharacter"];
+        post?: never;
+        /** Delete Character Link */
+        delete: operations["unlinkCharacter"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/players/observed-characters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Observed Characters */
+        get: operations["listObservedCharacters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rbac/mappings": {
         parameters: {
             query?: never;
@@ -180,6 +232,43 @@ export interface components {
              */
             status: "member" | "not_member" | "unavailable" | "unknown";
         };
+        /** CharacterLink */
+        CharacterLink: {
+            /** Class Name */
+            class_name: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Region */
+            region?: string | null;
+            /** Server */
+            server?: string | null;
+        };
+        /** CharacterLinkRequest */
+        CharacterLinkRequest: {
+            /** Player Id */
+            player_id: number;
+        };
+        /** CharacterMutationResponse */
+        CharacterMutationResponse: {
+            character: components["schemas"]["CharacterLink"];
+            /** Player Id */
+            player_id: number | null;
+        };
+        /** CharacterSource */
+        CharacterSource: {
+            /** Actor Id */
+            actor_id?: string | null;
+            /** Fight Id */
+            fight_id: string;
+            /** Provider */
+            provider: string;
+            /** Report Code */
+            report_code: string;
+            /** Snapshot Id */
+            snapshot_id: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -196,6 +285,44 @@ export interface components {
         LogoutResponse: {
             /** Signed Out */
             signed_out: boolean;
+        };
+        /** ManagedPlayer */
+        ManagedPlayer: {
+            /** Characters */
+            characters: components["schemas"]["CharacterLink"][];
+            /** Discord Id */
+            discord_id: number;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /** ObservedCharacter */
+        ObservedCharacter: {
+            /**
+             * Ambiguous
+             * @default false
+             */
+            ambiguous: boolean;
+            /** Class Name */
+            class_name: string;
+            /** Id */
+            id: number;
+            /** Linked Player Id */
+            linked_player_id?: number | null;
+            /** Name */
+            name: string;
+            /** Region */
+            region?: string | null;
+            /** Server */
+            server?: string | null;
+            /** Sources */
+            sources: components["schemas"]["CharacterSource"][];
+        };
+        /** ObservedCharactersResponse */
+        ObservedCharactersResponse: {
+            /** Characters */
+            characters: components["schemas"]["ObservedCharacter"][];
         };
         /** OpenRouterModelResponse */
         OpenRouterModelResponse: {
@@ -239,6 +366,11 @@ export interface components {
             raw_input_price: string | null;
             /** Raw Output Price */
             raw_output_price: string | null;
+        };
+        /** PlayersResponse */
+        PlayersResponse: {
+            /** Players */
+            players: components["schemas"]["ManagedPlayer"][];
         };
         /** RbacMappingResponse */
         RbacMappingResponse: {
@@ -480,6 +612,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    listPlayers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayersResponse"];
+                };
+            };
+        };
+    };
+    linkCharacter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CharacterLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CharacterMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlinkCharacter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CharacterMutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listObservedCharacters: {
+        parameters: {
+            query?: {
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservedCharactersResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
