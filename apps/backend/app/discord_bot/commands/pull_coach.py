@@ -438,14 +438,14 @@ class PullCoach(commands.Cog):
     @discord.slash_command(name="pullcoach", description="Analyze a Warcraft Logs boss pull")
     async def pullcoach(self, ctx: discord.ApplicationContext,
                         report: discord.Option(str, "Warcraft Logs report URL or code"),
-                        fight: discord.Option(str, "latest, browse, or Warcraft Logs fight ID", default="latest")):
+                        fight: discord.Option(str, "latest or Warcraft Logs fight ID", default=None)):
         await ctx.defer()
         code = "unknown"
         try:
             # Log report and requested selector without exception text, which may contain sensitive data.
             from app.web_requests.warcraft_logs import parse_report_code
             code = parse_report_code(report)
-            if str(fight).strip().lower() == "browse":
+            if fight is None:
                 await self._browse_fights(ctx, report)
                 return
             workflow = self.workflow_factory()
