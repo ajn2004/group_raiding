@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coaching/openrouter/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Openrouter Models */
+        get: operations["listOpenRouterModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/healthz": {
         parameters: {
             query?: never;
@@ -179,6 +196,49 @@ export interface components {
         LogoutResponse: {
             /** Signed Out */
             signed_out: boolean;
+        };
+        /** OpenRouterModelResponse */
+        OpenRouterModelResponse: {
+            /** Context Length */
+            context_length: number | null;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            pricing: components["schemas"]["OpenRouterPricingResponse"];
+            /** Supports Response Format */
+            supports_response_format: boolean | null;
+            /** Supports Structured Outputs */
+            supports_structured_outputs: boolean | null;
+        };
+        /** OpenRouterModelsResponse */
+        OpenRouterModelsResponse: {
+            /** Error */
+            error?: "catalog_unavailable" | null;
+            /** Models */
+            models: components["schemas"]["OpenRouterModelResponse"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "degraded";
+        };
+        /** OpenRouterPricingResponse */
+        OpenRouterPricingResponse: {
+            /** Input Dollars Per Million Tokens */
+            input_dollars_per_million_tokens: string | null;
+            /** Input Price Per Token */
+            input_price_per_token: string | null;
+            /** Output Dollars Per Million Tokens */
+            output_dollars_per_million_tokens: string | null;
+            /** Output Price Per Token */
+            output_price_per_token: string | null;
+            /** Price Unit */
+            price_unit: string;
+            /** Raw Input Price */
+            raw_input_price: string | null;
+            /** Raw Output Price */
+            raw_output_price: string | null;
         };
         /** RbacMappingResponse */
         RbacMappingResponse: {
@@ -380,6 +440,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listOpenRouterModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenRouterModelsResponse"];
                 };
             };
         };

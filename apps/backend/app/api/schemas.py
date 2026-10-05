@@ -43,3 +43,28 @@ class RbacMappingResponse(BaseModel):
 
 class RbacMappingsResponse(BaseModel):
     mappings: list[RbacMappingResponse]
+
+
+class OpenRouterPricingResponse(BaseModel):
+    input_dollars_per_million_tokens: str | None
+    output_dollars_per_million_tokens: str | None
+    input_price_per_token: str | None
+    output_price_per_token: str | None
+    raw_input_price: str | None
+    raw_output_price: str | None
+    price_unit: str
+
+
+class OpenRouterModelResponse(BaseModel):
+    id: str
+    name: str
+    context_length: int | None
+    pricing: OpenRouterPricingResponse
+    supports_response_format: bool | None
+    supports_structured_outputs: bool | None
+
+
+class OpenRouterModelsResponse(BaseModel):
+    status: Literal["available", "degraded"]
+    models: list[OpenRouterModelResponse]
+    error: Literal["catalog_unavailable"] | None = None
