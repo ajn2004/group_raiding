@@ -463,10 +463,10 @@ class PullCoach(commands.Cog):
     async def how_did_i_do(self, ctx: discord.ApplicationContext,
                            report: discord.Option(str, "Warcraft Logs report URL or code"),
                            character: discord.Option(str, "Wipefest character name or player ID"),
-                           fight: discord.Option(str, "latest, browse, or Warcraft Logs fight ID", default="latest")):
+                           fight: discord.Option(str, "latest, or Warcraft Logs fight ID", default=None) = None):
         await ctx.defer(ephemeral=True)
         try:
-            if str(fight).strip().lower() == "browse":
+            if fight is None or str(fight).strip().lower() == "browse":
                 await self._browse_fights(ctx, report, character=character)
                 return
             service = self.workflow_factory()

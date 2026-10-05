@@ -127,6 +127,83 @@ def test_individual_slash_command_registers_required_options_before_optional():
     command = PullCoach.how_did_i_do
     option_names = [option.name for option in command.options if option.name != "ctx"]
     assert option_names == ["report", "character", "fight"]
+    assert command.options[-1].required is False
+
+
+def test_individual_command_omitted_fight_browses_and_runs_only_after_selection(monkeypatch):
+    calls, sent = [], []
+    result = SimpleNamespace(coaching={"recommendations": []})
+
+    class Service:
+        def list_completed_fights(self, report):
+            calls.append(("list", report))
+            return [SimpleNamespace(fight_id="14", encounter_name="Boss", is_kill=False,
+                                    boss_percentage=25)]
+
+        def run_player(self, report, fight, character):
+            calls.append(("player", report, fight, character))
+            return result
+
+    class Followup:
+        async def send(self, *args, **kwargs):
+            sent.append((args, kwargs))
+            return SimpleNamespace()
+
+    class Context:
+        author = SimpleNamespace(id=123)
+        followup = Followup()
+
+        async def defer(self, **kwargs):
+            sent.append(("defer", kwargs))
+
+    async def to_thread(fn, *args):
+        return fn(*args)
+
+    monkeypatch.setattr(command_module.asyncio, "to_thread", to_thread)
+    monkeypatch.setattr(command_module, "to_discord_embed", lambda payload: payload)
+    ctx = Context()
+    asyncio.run(PullCoach.how_did_i_do.callback(PullCoach(None, workflow_factory=Service()),
+                                                 ctx, "REPORT", "Aleannora", None))
+    assert len(sent) > 1, sent
+    assert calls == [("list", "REPORT")]
+    assert sent[0] == ("defer", {"ephemeral": True})
+    assert sent[1][0] == ("Choose a completed boss fight:",)
+    assert sent[1][1]["ephemeral"] is True
+    picker = sent[1][1]["view"]
+    assert picker.children[0].options[0].label == "Fight 14 · Boss"
+
+    class Response:
+        async def edit_message(self, **kwargs):
+            pass
+
+    class Interaction:
+        user = SimpleNamespace(id=123)
+        data = {"values": ["14"]}
+        response = Response()
+
+        class Followup:
+            async def send(self, **kwargs):
+                sent.append(((), kwargs))
+        followup = Followup()
+
+    asyncio.run(picker._select(Interaction()))
+    assert calls == [("list", "REPORT"), ("player", "REPORT", "14", "Aleannora")]
+    assert sent[-1][1]["ephemeral"] is True
+
+
+def test_fight_picker_rejects_another_user_ephemerally():
+    messages = []
+
+    class Response:
+        async def send_message(self, text, *, ephemeral):
+            messages.append((text, ephemeral))
+
+    async def check():
+        picker = command_module.FightPicker([], 123, lambda *_: None)
+        interaction = SimpleNamespace(user=SimpleNamespace(id=456), response=Response())
+        assert await picker.interaction_check(interaction) is False
+    asyncio.run(check())
+    assert messages == [("This fight browser belongs to another user.", True)]
 
 
 def test_command_boundary_maps_failures_without_leaking_exception_text(monkeypatch):
